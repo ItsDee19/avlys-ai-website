@@ -34,7 +34,7 @@ function Contact() {
   };
 
   return (
-    <main>
+    <div className="contact-page">
       <section className="hero contact-hero">
         <div className="hero-content">
           <h1 className="reveal-text">Get in Touch with Avlys AI</h1>
@@ -534,7 +534,7 @@ function Contact() {
           }
         }
       `}</style>
-    </main>
+    </div>
   );
 }
 

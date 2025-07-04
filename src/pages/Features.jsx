@@ -15,7 +15,7 @@ const featureList = [
 
 function Features() {
   return (
-    <main>
+    <div className="features-page">
       <section className="features" id="features">
         <div className="section-header">
           <h2>Core Features</h2>
@@ -40,7 +40,7 @@ function Features() {
           ))}
         </section>
       </section>
-    </main>
+    </div>
   );
 }
 

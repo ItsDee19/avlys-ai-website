@@ -12,35 +12,30 @@ const Founders = () => {
     {
       name: "Deepak Sahu",
       role: "Chief Technology Officer",
-      description: "The technical genius behind our agentic AI architecture. With extensive expertise in full-stack development and AI/ML, Deepak enables our platform to generate, translate, and deploy marketing content with minimal human intervention. His innovations form the backbone of our intelligent marketing ecosystem.",
       linkedin: "https://www.linkedin.com/in/deepak-sahu-9ab150214/",
       image: "/team/deepak.jpg"
     },
     {
       name: "Gaurav Purohit",
       role: "Chief Executive Officer",
-      description: "With a legal background and systems thinking approach, Gaurav brings strategic vision and operational excellence to Avlys. As a serial entrepreneur, he understands the challenges Indian businesses face and leads our mission to make sophisticated marketing automation accessible to all MSMEs.",
       linkedin: "https://www.linkedin.com/in/gaurav-purohit-230463285?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app ",
       image: "/team/gaurav.jpg"
     },
     {
       name: "Aadil Ahmed Khan",
       role: "Head of Design",
-      description: "Every pixel matters when building intuitive experiences. Aadil ensures our platform remains user-friendly despite its powerful capabilities. His clean, thoughtful UI/UX designs make complex automated marketing tools accessible to even the least tech-savvy business owners.",
       linkedin: "http://www.linkedin.com/in/aadil-ahmad-khan-681272254",
       image: "/team/aadil.jpg"
     },
     {
       name: "Rohan Purohit",
       role: "Chief Marketing Officer",
-      description: "Rohan's expertise in marketing strategy drives our approach to solving real-world business challenges. He meticulously crafts customer journeys and content frameworks that power our platform's ability to deliver hyperlocal marketing that resonates with diverse audiences across India.",
       linkedin: "https://www.linkedin.com/in/rohan-purohit-04860517b/",
       image: "/team/rohan.jpg"
     },
     {
       name: "Roshan Dharua",
       role: "Head of Creativity",
-      description: "With a background in psychology, Roshan brings the human element to our AI systems. His insights drive our multilingual content creation engine, ensuring marketing assets connect emotionally with regional audiences across India's diverse linguistic landscape.",
       linkedin: "https://www.linkedin.com/in/roshan-dharua-27b540234?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       image: "/team/roshan.jpg"
     }
@@ -179,16 +174,6 @@ const Founders = () => {
                 width: hoveredIndex === index ? "100%" : "80%",
                 transition: "width 0.3s ease"
               }}></div>
-              
-              <p style={{
-                color: "var(--secondary-color)",
-                fontSize: "0.95rem",
-                lineHeight: 1.6,
-                opacity: 0.9,
-                flex: 1
-              }}>
-                {founder.description}
-              </p>
 
               <a 
                 href={founder.linkedin}

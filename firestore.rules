@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+      // User's campaigns subcollection
+      match /campaigns/{campaignId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    // Top-level campaigns collection
+    match /campaigns/{campaignId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    // Campaign analytics belong to users
+    match /campaign_analytics/{analyticsId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    // Payments belong to users
+    match /payments/{paymentId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    // Public collections (with some restrictions)
+    match /contacts/{contactId} {
+      allow create: if true; // Anyone can submit contact form
+      allow read, write: if request.auth != null; // Only authenticated users can read/update
+    }
+    match /newsletter/{subscriberId} {
+      allow create: if true; // Anyone can subscribe
+      allow read, write: if request.auth != null; // Only authenticated users can manage
+    }
+  }
+} 

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 function Footer() {
     return (
-      <footer>
+      <footer role="contentinfo">
         <div className="footer-content">
           <div className="footer-logo">
             <h3>AVLYS AI</h3>

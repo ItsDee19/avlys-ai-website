@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import SignIn from './SignIn';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth.jsx';
 
 // Animation hook for section animations
 function useElementOnScreen(ref, options = {}) {
@@ -133,6 +135,9 @@ function Home() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Refs for animated sections
   const workflowRef = useRef(null);
@@ -186,11 +191,60 @@ function Home() {
 
   const handleExploreClick = (e) => {
     e.preventDefault();
-    setIsSignInOpen(true);
+    if (workflowRef.current) {
+      workflowRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
+  const handleBuildCampaignClick = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    if (user) {
+      // Add a small delay for visual feedback
+      setTimeout(() => {
+        setIsLoading(false);
+        navigate('/dashboard?tab=campaigns');
+      }, 300);
+    } else {
+      setIsLoading(false);
+      navigate('/dashboard?tab=campaigns&showSignIn=1');
+    }
+  };
+
+  const handleSignInClose = () => {
+    setIsSignInOpen(false);
+  };
+
+  const handleSignInSuccess = () => {
+    setIsSignInOpen(false);
+    navigate('/dashboard?tab=campaigns');
+  };
+
+  // Add keyframe animation for spinner
+  useEffect(() => {
+    // Create style element for spinner animation if it doesn't exist
+    if (!document.getElementById('spinner-animation')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'spinner-animation';
+      styleEl.textContent = `
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+    
+    return () => {
+      // Clean up style element when component unmounts
+      const styleEl = document.getElementById('spinner-animation');
+      if (styleEl) styleEl.remove();
+    };
+  }, []);
+
   return (
-    <main>
+    <div className="home-page">
+      <SignIn isOpen={isSignInOpen} onClose={handleSignInClose} onSuccess={handleSignInSuccess} />
       <section className="hero">
         <div className="hero-content">
           <div className="hero-text-container">
@@ -205,14 +259,22 @@ function Home() {
             </p>
           </div>
           <div className="hero-buttons">
-            <a 
-              href="https://studio--avlys-ai.us-central1.hosted.app" 
+            <button 
+              onClick={handleBuildCampaignClick} 
               className="btn primary hero-btn"
-              target="_blank"
-              rel="noopener noreferrer"
+              disabled={isLoading}
+              style={isLoading ? { position: 'relative', opacity: 0.8, cursor: 'wait' } : {}}
             >
-              Try Early Model
-            </a>
+              {isLoading ? (
+                <>
+                  <span style={{ visibility: 'hidden' }}>Build Your Campaign</span>
+                  <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '8px' }}></span>
+                    Loading...
+                  </span>
+                </>
+              ) : 'Build Your Campaign'}
+            </button>
             <button 
               onClick={handleExploreClick} 
               className="btn secondary glow-hover hero-btn"
@@ -390,11 +452,7 @@ function Home() {
           {message && <p className="success-message reveal-text">{message}</p>}
         </div>
       </section>
-      <SignIn 
-        isOpen={isSignInOpen} 
-        onClose={() => setIsSignInOpen(false)} 
-      />
-    </main>
+    </div>
   );
 }
 

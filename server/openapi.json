@@ -1,0 +1,123 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Avyls AI API",
+    "version": "1.0.0",
+    "description": "API for managing user profiles, campaigns, and payments."
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "paths": {
+    "/profile": {
+      "get": {
+        "summary": "Get user profile",
+        "description": "Retrieves the profile for the authenticated user.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Successful response", "content": { "application/json": {} } },
+          "404": { "description": "Profile not found" }
+        }
+      },
+      "post": {
+        "summary": "Create or update user profile",
+        "description": "Creates or updates the profile for the authenticated user.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": {} }
+        },
+        "responses": {
+          "200": { "description": "Successful response", "content": { "application/json": {} } }
+        }
+      }
+    },
+    "/campaigns": {
+      "post": {
+        "summary": "Create a new campaign",
+        "description": "Creates a new campaign for the authenticated user.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": {} }
+        },
+        "responses": {
+          "201": { "description": "Campaign created successfully" }
+        }
+      }
+    },
+    "/campaigns/{id}": {
+        "get": {
+            "summary": "Get a single campaign",
+            "description": "Retrieves a single campaign by its ID.",
+            "security": [{ "bearerAuth": [] }],
+            "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+            "responses": {
+                "200": { "description": "Successful response" },
+                "403": { "description": "Forbidden" },
+                "404": { "description": "Campaign not found" }
+            }
+        },
+        "put": {
+            "summary": "Update a campaign",
+            "description": "Updates a campaign by its ID.",
+            "security": [{ "bearerAuth": [] }],
+            "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+            "requestBody": {
+              "required": true,
+              "content": { "application/json": {} }
+            },
+            "responses": {
+                "200": { "description": "Successful response" },
+                "403": { "description": "Forbidden" },
+                "404": { "description": "Campaign not found" }
+            }
+        },
+        "delete": {
+            "summary": "Delete a campaign",
+            "description": "Deletes a campaign by its ID.",
+            "security": [{ "bearerAuth": [] }],
+            "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+            "responses": {
+                "204": { "description": "Campaign deleted successfully" },
+                "403": { "description": "Forbidden" },
+                "404": { "description": "Campaign not found" }
+            }
+        }
+    },
+    "/payments/create-checkout-session": {
+        "post": {
+            "summary": "Create Stripe Checkout session",
+            "description": "Creates a new Stripe Checkout session for a one-time payment.",
+            "security": [{ "bearerAuth": [] }],
+            "requestBody": {
+              "required": true,
+              "content": { "application/json": { "schema": { "type": "object", "properties": { "priceId": { "type": "string" }, "campaignId": { "type": "string" } } } } }
+            },
+            "responses": {
+                "200": { "description": "Successful response" }
+            }
+        }
+    },
+    "/payments/webhook": {
+        "post": {
+            "summary": "Stripe webhook handler",
+            "description": "Handles incoming webhook events from Stripe.",
+            "responses": {
+                "200": { "description": "Webhook received" }
+            }
+        }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+} 
