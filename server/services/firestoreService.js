@@ -530,6 +530,49 @@ class FirestoreService {
       throw error;
     }
   }
+
+  // Deployment operations
+  async getDeploymentsByUser(userId) {
+    this.checkAvailability();
+    const deploymentsRef = db.collection('deployments');
+    const snapshot = await deploymentsRef.where('userId', '==', userId).orderBy('createdAt', 'desc').get();
+    if (snapshot.empty) return [];
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  async getDeploymentHistoryByUser(userId) {
+    this.checkAvailability();
+    const deploymentsRef = db.collection('deployments');
+    const snapshot = await deploymentsRef.where('userId', '==', userId).orderBy('createdAt', 'desc').get();
+    if (snapshot.empty) return [];
+    // For history, you might want to return all deployments or filter by status, etc.
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  async createDeployment(deploymentData) {
+    this.checkAvailability();
+    const deploymentDoc = {
+      ...deploymentData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const docRef = await db.collection('deployments').add(deploymentDoc);
+    return { id: docRef.id, ...deploymentDoc };
+  }
+
+  async updateDeployment(deploymentId, updateData) {
+    this.checkAvailability();
+    const deploymentRef = db.collection('deployments').doc(deploymentId);
+    await deploymentRef.update({ ...updateData, updatedAt: new Date() });
+    const updatedDoc = await deploymentRef.get();
+    return { id: deploymentId, ...updatedDoc.data() };
+  }
+
+  async deleteDeployment(deploymentId) {
+    this.checkAvailability();
+    await db.collection('deployments').doc(deploymentId).delete();
+    return { id: deploymentId, deleted: true };
+  }
 }
 
 module.exports = new FirestoreService();

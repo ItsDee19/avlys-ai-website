@@ -61,6 +61,7 @@ const userRoutes = require('./routes/user');
 const profileRoutes = require('./routes/profile');
 const paymentRoutes = require('./routes/payments');
 const analyticsRoutes = require('./routes/analytics');
+const deploymentsRoutes = require('./routes/deployments');
 
 app.use('/api/ai', aiRoutes);
 app.use('/api/auth', authRoutes);
@@ -71,6 +72,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api', analyticsRoutes);
+app.use('/api/deployments', deploymentsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

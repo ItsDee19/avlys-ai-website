@@ -1,7 +1,8 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth.jsx';
 
-const ProtectedRoute = ({ children, showSignInModal, isSignInModalOpen }) => {
+const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -9,11 +10,7 @@ const ProtectedRoute = ({ children, showSignInModal, isSignInModalOpen }) => {
   }
 
   if (!user) {
-    if (showSignInModal && !isSignInModalOpen) {
-      showSignInModal();
-    }
-    // Don't render children or anything else while modal is open
-    return null;
+    return <Navigate to="/signin" replace />;
   }
 
   return children;

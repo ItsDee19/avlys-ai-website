@@ -138,7 +138,7 @@ function Contact() {
                 </div>
                 <div className="card-content">
                   <h3>Our Office</h3>
-                  <p>Regus Grandeur Offices Private Limited,08th Floor, SLN Terminus, Survey No.133, Beside Botanical Gardens, Gachibowli, Hyderabad, Telangana - 500032, India</p>
+                  <p>2/91/20, BP Raju Marg, Laxmi Cyber City, Whitefields, Kondapur, Telangana 500081</p>
                 </div>
               </div>
               
@@ -166,7 +166,7 @@ function Contact() {
             <div className="map-section">
               <h4>Find Us</h4>
               <a 
-                href="https://maps.app.goo.gl/vH3jTZKie5yGxmr57?g_st=com.google.maps.preview.copy"
+                href="https://maps.app.goo.gl/BavDhnjVgHAwmzVe8"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="map-link"

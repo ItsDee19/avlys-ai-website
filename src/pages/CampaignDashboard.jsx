@@ -13,8 +13,10 @@ import Header from '../components/Header.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import SignIn from './SignIn';
 import OverviewGrid from '../components/ui/OverviewGrid';
-import { TrendingUp, Eye, MousePointerClick, Target, DollarSign, Activity, Edit2, Copy, Trash2 } from 'lucide-react';
+import { TrendingUp, Eye, MousePointerClick, Target, DollarSign, Activity, Edit2, Copy, Trash2, UserCircle, Settings as SettingsIcon } from 'lucide-react';
 import { Plus } from 'lucide-react';
+import DeploymentCenter from '../components/deployment/DeploymentCenter';
+import { useToast } from '../components/ToastProvider';
 
 // Memoized metric card component for better performance
 const MetricCard = memo(({
@@ -142,7 +144,8 @@ const AnimatedNumber = ({ value }) => {
   return <span>{display.toLocaleString()}</span>;
 };
 
-const CampaignDashboard = () => {
+const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
+  // All hooks must be at the top level, before any conditionals or returns
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -152,8 +155,27 @@ const CampaignDashboard = () => {
   const [error, setError] = useState(null);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const [campaignsView, setCampaignsView] = useState('table'); // 'table' or 'card'
+  const [campaignsView, setCampaignsView] = useState('table');
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileButtonRef = React.useRef(null);
+  const [signInPrompted, setSignInPrompted] = useState(false);
+  const { showToast } = useToast();
+
+  // All useEffects also at top level
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileButtonRef.current && !profileButtonRef.current.contains(event.target)) {
+        setProfileMenuOpen(false);
+      }
+    }
+    if (profileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileMenuOpen]);
 
   // Settings state (with localStorage persistence)
   const [settings, setSettings] = useState(() => {
@@ -182,20 +204,12 @@ const CampaignDashboard = () => {
     if (user) {
       navigate('/campaign-builder');
     } else {
-      setIsSignInOpen(true);
+      handleShowSignIn();
     }
   };
 
   // Prevent closing sign-in modal unless user is authenticated
   const canCloseSignIn = !!user && !!user.email;
-
-  const handleSignInClose = () => {
-    if (canCloseSignIn) setIsSignInOpen(false);
-  };
-  const handleSignInSuccess = () => {
-    setIsSignInOpen(false);
-    navigate('/campaign-builder');
-  };
 
   // Platform distribution for Pie chart
   const platformCounts = useMemo(() => {
@@ -347,13 +361,14 @@ const CampaignDashboard = () => {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const showSignIn = searchParams.get('showSignIn');
-    if ((!user || !user.email) && showSignIn === '1') {
+    if ((!user || !user.email) && showSignIn === '1' && !signInPrompted) {
       const timer = setTimeout(() => {
-        setIsSignInOpen(true);
+        handleShowSignIn();
+        setSignInPrompted(true);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [user, location.search]);
+  }, [user, location.search, signInPrompted, handleShowSignIn]);
 
   // Show loading spinner during sign-out
   const [signOutLoading, setSignOutLoading] = useState(false);
@@ -372,7 +387,7 @@ const CampaignDashboard = () => {
         user.isLoggingOut = false;
       }
       setSignOutLoading(false);
-      setIsSignInOpen(true);
+      handleShowSignIn();
     }
   };
 
@@ -443,10 +458,16 @@ const CampaignDashboard = () => {
     // TODO: Implement duplicate logic
     alert(`Duplicate campaign: ${campaign.title}`);
   };
-  const handleDeleteCampaign = (campaign) => {
-    // TODO: Implement delete logic
+  const handleDeleteCampaign = async (campaign) => {
+    showToast(`Are you sure you want to delete campaign: ${campaign.title}?`, 'warning');
     if (window.confirm(`Are you sure you want to delete campaign: ${campaign.title}?`)) {
-      alert('Deleted!');
+      try {
+        // TODO: Replace with actual delete logic (API call)
+        // await deleteCampaign(campaign.id);
+        showToast('Campaign deleted successfully!', 'success');
+      } catch (err) {
+        showToast('Failed to delete campaign. Please try again.', 'error');
+      }
     }
   };
 
@@ -454,7 +475,7 @@ const CampaignDashboard = () => {
   if (loading) {
     return (
       <>
-        <Header onLogout={handleLogout} user={user} onUserClick={() => setIsSignInOpen(true)} />
+        <Header onLogout={handleLogout} user={user} onUserClick={handleShowSignIn} />
         <div
           className="campaign-dashboard"
           style={{
@@ -502,7 +523,7 @@ const CampaignDashboard = () => {
   if (error && retryCount >= 3) {
     return (
       <>
-        <Header onLogout={logout} user={user} onUserClick={() => setIsSignInOpen(true)} />
+        <Header onLogout={logout} user={user} onUserClick={handleShowSignIn} />
         <div
           className="campaign-dashboard"
           style={{
@@ -564,13 +585,12 @@ const CampaignDashboard = () => {
   }
 
   console.log('Dashboard user:', user);
-  console.log('Dashboard isSignInOpen:', isSignInOpen);
+  console.log('Dashboard isSignInOpen:', signInPrompted);
 
   if (!user || !user.email) {
     return (
       <>
-        <Header onLogout={logout} user={user} onUserClick={() => setIsSignInOpen(true)} onSwitchAccount={() => { logout(); setIsSignInOpen(true); }} />
-        <SignIn isOpen={isSignInOpen} onClose={handleSignInClose} onSuccess={handleSignInSuccess} />
+        <Header onLogout={logout} user={user} onUserClick={handleShowSignIn} onSwitchAccount={() => { logout(); handleShowSignIn(); }} />
         <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
           <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', padding: '2.5rem 2rem', fontSize: '1.3rem', color: '#2563eb', fontWeight: 600, textAlign: 'center' }}>
             Please sign in to view your campaigns.
@@ -580,11 +600,31 @@ const CampaignDashboard = () => {
     );
   }
 
+  // Handler to update socials from deployment center modal
+  const handleUpdateSocials = (platform, value) => {
+    // Platform-specific validation
+    const patterns = {
+      facebook: /^(https?:\/\/)?(www\.)?facebook\.com\/[A-Za-z0-9.]{5,}$/,
+      instagram: /^(https?:\/\/)?(www\.)?instagram\.com\/[A-Za-z0-9_.]{1,30}$/,
+      twitter: /^(https?:\/\/)?(www\.)?twitter\.com\/[A-Za-z0-9_]{1,15}$/,
+      linkedin: /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[A-Za-z0-9-]{5,30}$/,
+      tiktok: /^(https?:\/\/)?(www\.)?tiktok\.com\/@[A-Za-z0-9_.]{2,24}$/,
+      youtube: /^(https?:\/\/)?(www\.)?youtube\.com\/(channel|c|user)\/[A-Za-z0-9_-]{1,}$/,
+    };
+    const key = platform.toLowerCase();
+    const pattern = patterns[key];
+    if (pattern && !pattern.test(value)) {
+      showToast(`Please enter a valid ${platform} profile URL.`, 'warning');
+      return;
+    }
+    setSettings(s => ({ ...s, socials: { ...s.socials, [key]: value } }));
+    showToast(`${platform} account connected!`, 'success');
+  };
+
   return (
     <>
-      <Header onLogout={handleLogout} user={user} onUserClick={() => setIsSignInOpen(true)} onSwitchAccount={() => { logout(); setIsSignInOpen(true); }} />
+      <Header onLogout={handleLogout} user={user} onUserClick={handleShowSignIn} onSwitchAccount={() => { logout(); handleShowSignIn(); }} />
       {signOutLoading && <div className="signout-spinner-overlay"><span className="spinner" /></div>}
-      <SignIn isOpen={isSignInOpen} onClose={handleSignInClose} onSuccess={handleSignInSuccess} />
       <div
         className="campaign-dashboard"
         style={{
@@ -621,48 +661,172 @@ const CampaignDashboard = () => {
               <h1 style={{ fontWeight: 700, fontSize: '2.2rem', margin: 0, color: '#1e293b', letterSpacing: '-1px' }}>Campaign Dashboard</h1>
               <p style={{ color: '#64748b', fontWeight: 400, fontSize: '1.1rem', margin: '0.5rem 0 0 0' }}>Manage and monitor your AI-powered marketing campaigns</p>
             </div>
-            <button
-              onClick={handleNewCampaignClick}
-              style={{
-                background: 'linear-gradient(90deg, #2563eb 0%, #10b981 100%)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '999px',
-                padding: '0.8rem 2rem',
-                fontWeight: 700,
-                fontSize: '1.08rem',
-                boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
-                cursor: 'pointer',
-                marginLeft: '2rem',
-                transition: 'background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s',
-                outline: 'none',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-              }}
-              aria-label="Create new campaign"
-              onMouseOver={e => {
-                e.currentTarget.style.background = 'linear-gradient(90deg, #1e40af 0%, #059669 100%)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,99,235,0.18)';
-                e.currentTarget.style.transform = 'translateY(-2px) scale(1.03)';
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.background = 'linear-gradient(90deg, #2563eb 0%, #10b981 100%)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(37,99,235,0.10)';
-                e.currentTarget.style.transform = 'none';
-              }}
-            >
-              <Plus size={20} style={{ marginRight: 4, marginBottom: 1 }} />
-              New Campaign
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+              <button
+                onClick={handleNewCampaignClick}
+                style={{
+                  background: 'linear-gradient(90deg, #2563eb 0%, #10b981 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '0.8rem 2rem',
+                  fontWeight: 700,
+                  fontSize: '1.08rem',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
+                  cursor: 'pointer',
+                  marginLeft: '2rem',
+                  transition: 'background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s',
+                  outline: 'none',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                }}
+                aria-label="Create new campaign"
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #1e40af 0%, #059669 100%)';
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,99,235,0.18)';
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.03)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #2563eb 0%, #10b981 100%)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(37,99,235,0.10)';
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                <Plus size={20} style={{ marginRight: 4, marginBottom: 1 }} />
+                New Campaign
+              </button>
+              {/* Profile Button */}
+              <div ref={profileButtonRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setProfileMenuOpen((open) => !open)}
+                  aria-label="Profile menu"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    borderRadius: '50%',
+                    padding: 0,
+                    marginLeft: '1rem',
+                    cursor: 'pointer',
+                    width: 48,
+                    height: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: profileMenuOpen ? '0 0 0 2px #2563eb44' : 'none',
+                    transition: 'box-shadow 0.2s',
+                  }}
+                >
+                  {user ? (
+                    <img
+                      src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email || 'User')}&background=2563eb&color=fff&rounded=true&size=40`}
+                      alt="Profile"
+                      style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #2563eb' }}
+                    />
+                  ) : (
+                    <UserCircle size={40} color="#2563eb" />
+                  )}
+                </button>
+                {/* Dropdown Menu */}
+                {profileMenuOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 52,
+                      right: 0,
+                      background: '#fff',
+                      borderRadius: 12,
+                      boxShadow: '0 4px 24px rgba(37,99,235,0.13)',
+                      minWidth: 180,
+                      zIndex: 100,
+                      padding: '0.5rem 0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'stretch',
+                    }}
+                  >
+                    <div style={{ padding: '0.7rem 1.2rem', borderBottom: '1px solid #f1f5f9', fontWeight: 600, color: '#2563eb', fontSize: '1.05rem' }}>
+                      {user && user.displayName ? user.displayName : 'Profile'}
+                    </div>
+                    {/* Settings Option */}
+                    <button
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '0.7rem 1.2rem',
+                        textAlign: 'left',
+                        fontSize: '1rem',
+                        color: '#222',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'background 0.15s',
+                      }}
+                      onClick={() => { setProfileMenuOpen(false); setSettingsModalOpen(true); }}
+                    >
+                      <SettingsIcon size={18} style={{ marginRight: 6 }} /> Settings
+                    </button>
+                    <button
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '0.7rem 1.2rem',
+                        textAlign: 'left',
+                        fontSize: '1rem',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                      onClick={() => { setProfileMenuOpen(false); logout(); }}
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-
-          {/* Campaigns will be displayed in the tabs below */}
-
+          {/* Settings Modal (scaffold) */}
+          {settingsModalOpen && (
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.18)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 8px 40px rgba(37,99,235,0.13)', padding: '2rem 2.5rem', minWidth: 320, minHeight: 180, position: 'relative' }}>
+                <button onClick={() => setSettingsModalOpen(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', fontSize: 22, color: '#64748b', cursor: 'pointer' }}>&times;</button>
+                <h2 style={{ fontWeight: 700, fontSize: '1.3rem', marginBottom: 16 }}>Settings</h2>
+                <div style={{ marginBottom: 18 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: '1.08rem', marginBottom: 10, color: '#2563eb' }}>Social Media Accounts</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {[
+                      { key: 'facebook', label: 'Facebook', color: '#1877f2' },
+                      { key: 'instagram', label: 'Instagram', color: '#e1306c' },
+                      { key: 'twitter', label: 'Twitter', color: '#1da1f2' },
+                      { key: 'linkedin', label: 'LinkedIn', color: '#0a66c2' },
+                      { key: 'tiktok', label: 'TikTok', color: '#000' },
+                      { key: 'youtube', label: 'YouTube', color: '#ff0000' },
+                    ].map(({ key, label, color }) => (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: '50%', background: color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 15 }}>{label[0]}</span>
+                        <label htmlFor={`settings-${key}`} style={{ minWidth: 80, color: '#222', fontWeight: 600 }}>{label}</label>
+                        <input
+                          id={`settings-${key}`}
+                          type="text"
+                          placeholder={`Enter your ${label} username or URL`}
+                          value={settings.socials?.[key] || ''}
+                          onChange={e => setSettings(s => ({ ...s, socials: { ...s.socials, [key]: e.target.value } }))}
+                          style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: 8, border: '1.5px solid #e0e7ff', fontSize: '1rem', color: '#222', background: '#f8fafc', outline: 'none', boxShadow: '0 1px 4px #2563eb08', transition: 'border 0.2s' }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* You can add more settings sections here */}
+              </div>
+            </div>
+          )}
           {/* Dashboard Tabs */}
           <div className="dashboard-tabs" style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '1.5rem' }}>
-            {['overview', 'campaigns', 'analytics', 'settings'].map(tab => (
+            {['overview', 'campaigns', 'analytics', 'deployment'].map(tab => (
               <button
                 key={tab}
                 className={`tab${activeTab === tab ? ' active' : ''}`}
@@ -685,7 +849,6 @@ const CampaignDashboard = () => {
               </button>
             ))}
           </div>
-
           {/* Dashboard Content */}
           <div className="dashboard-content">
             {activeTab === 'overview' && (
@@ -1242,7 +1405,7 @@ const CampaignDashboard = () => {
                             label
                           >
                             {Object.keys(campaigns.reduce((acc, c) => { acc[c.location || 'Unknown'] = true; return acc; }, {})).map((region, idx) => (
-                              <RechartsPie.Cell key={region} fill={["#2563eb", "#10b981", "#f59e0b", "#eab308", "#f43f5e", "#6366f1", "#f472b6"][idx % 7]} />
+                              <Cell key={region} fill={["#2563eb", "#10b981", "#f59e0b", "#eab308", "#f43f5e", "#6366f1", "#f472b6"][idx % 7]} />
                             ))}
                           </RechartsPie>
                           <RechartsTooltip />
@@ -1343,186 +1506,34 @@ const CampaignDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'settings' && (
-              <div className="settings-section" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '400px' }}>
-                <div style={{
-                  background: '#fff',
-                  borderRadius: '28px',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-                  padding: '2.5rem 2rem',
-                  maxWidth: '420px',
-                  width: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2rem',
-                  border: 'none',
-                }}>
-                  <h2 style={{ fontWeight: 700, fontSize: '1.25rem', color: '#222', margin: 0, letterSpacing: '-0.5px', textAlign: 'center' }}>Settings</h2>
-                  <div style={{ borderTop: '1px solid #f1f5f9', margin: '0.5rem 0 1.5rem 0' }}></div>
-                  <form style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} onSubmit={e => { e.preventDefault(); }}>
-                    <div>
-                      <label htmlFor="userName" style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem', marginBottom: '0.5rem', display: 'block' }}>Name</label>
-                      <input id="userName" type="text" placeholder="Your name" value={settings.userName || ''} onChange={e => setSettings(s => ({ ...s, userName: e.target.value }))} style={{
-                        width: '100%',
-                        padding: '0.7rem 1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#222',
-                        background: '#f8fafc',
-                        outline: 'none',
-                        marginTop: '0.25rem',
-                      }} />
-                    </div>
-                    <div>
-                      <label htmlFor="userEmail" style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem', marginBottom: '0.5rem', display: 'block' }}>Email</label>
-                      <input id="userEmail" type="email" placeholder="you@email.com" value={settings.userEmail || ''} onChange={e => setSettings(s => ({ ...s, userEmail: e.target.value }))} style={{
-                        width: '100%',
-                        padding: '0.7rem 1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#222',
-                        background: '#f8fafc',
-                        outline: 'none',
-                        marginTop: '0.25rem',
-                      }} />
-                    </div>
-                    <div>
-                      <label htmlFor="userPassword" style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem', marginBottom: '0.5rem', display: 'block' }}>Password</label>
-                      <input id="userPassword" type="password" placeholder="••••••••" value={settings.userPassword || ''} onChange={e => setSettings(s => ({ ...s, userPassword: e.target.value }))} style={{
-                        width: '100%',
-                        padding: '0.7rem 1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#222',
-                        background: '#f8fafc',
-                        outline: 'none',
-                        marginTop: '0.25rem',
-                      }} />
-                    </div>
-                    {/* Toggles for notifications and campaign alerts */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                      <label style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem' }}>Email Notifications</label>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={settings.emailNotifications} onChange={e => setSettings(s => ({ ...s, emailNotifications: e.target.checked }))} style={{ display: 'none' }} />
-                        <span style={{
-                          width: '40px',
-                          height: '22px',
-                          background: settings.emailNotifications ? '#2563eb' : '#e5e7eb',
-                          borderRadius: '999px',
-                          position: 'relative',
-                          transition: 'background 0.2s',
-                          marginRight: '0.5rem',
-                          display: 'inline-block',
-                        }}>
-                          <span style={{
-                            position: 'absolute',
-                            left: settings.emailNotifications ? '20px' : '2px',
-                            top: '2px',
-                            width: '18px',
-                            height: '18px',
-                            background: settings.emailNotifications ? '#fff' : '#2563eb',
-                            borderRadius: '50%',
-                            transition: 'left 0.2s, background 0.2s',
-                            boxShadow: '0 1px 4px rgba(37,99,235,0.07)'
-                          }}></span>
-                        </span>
-                      </label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-                      <label style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem' }}>Campaign Alerts</label>
-                      <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={settings.campaignAlerts} onChange={e => setSettings(s => ({ ...s, campaignAlerts: e.target.checked }))} style={{ display: 'none' }} />
-                        <span style={{
-                          width: '40px',
-                          height: '22px',
-                          background: settings.campaignAlerts ? '#2563eb' : '#e5e7eb',
-                          borderRadius: '999px',
-                          position: 'relative',
-                          transition: 'background 0.2s',
-                          marginRight: '0.5rem',
-                          display: 'inline-block',
-                        }}>
-                          <span style={{
-                            position: 'absolute',
-                            left: settings.campaignAlerts ? '20px' : '2px',
-                            top: '2px',
-                            width: '18px',
-                            height: '18px',
-                            background: settings.campaignAlerts ? '#fff' : '#2563eb',
-                            borderRadius: '50%',
-                            transition: 'left 0.2s, background 0.2s',
-                            boxShadow: '0 1px 4px rgba(37,99,235,0.07)'
-                          }}></span>
-                        </span>
-                      </label>
-                    </div>
-                    {/* More campaign settings */}
-                    <div>
-                      <label htmlFor="defaultView" style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem', marginBottom: '0.5rem', display: 'block' }}>Default View</label>
-                      <select id="defaultView" value={settings.defaultView} onChange={e => setSettings(s => ({ ...s, defaultView: e.target.value }))} style={{
-                        width: '100%',
-                        padding: '0.7rem 1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#222',
-                        background: '#f8fafc',
-                        outline: 'none',
-                        marginTop: '0.25rem',
-                      }}>
-                        <option>Grid View</option>
-                        <option>List View</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="timeZone" style={{ color: '#64748b', fontWeight: 500, fontSize: '1rem', marginBottom: '0.5rem', display: 'block' }}>Time Zone</label>
-                      <select id="timeZone" value={settings.timeZone} onChange={e => setSettings(s => ({ ...s, timeZone: e.target.value }))} style={{
-                        width: '100%',
-                        padding: '0.7rem 1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #e5e7eb',
-                        fontSize: '1rem',
-                        color: '#222',
-                        background: '#f8fafc',
-                        outline: 'none',
-                        marginTop: '0.25rem',
-                      }}>
-                        <option>UTC-5 (Eastern Time)</option>
-                        <option>UTC-8 (Pacific Time)</option>
-                        <option>UTC+0 (GMT)</option>
-                      </select>
-                    </div>
-                    <button type="submit" style={{
-                      background: '#2563eb',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '999px',
-                      padding: '0.7rem 1.5rem',
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 4px rgba(37,99,235,0.07)',
-                      transition: 'background 0.15s, color 0.15s',
-                      marginTop: '0.5rem',
-                    }}>Save Changes</button>
-                  </form>
-                </div>
+            {activeTab === 'deployment' && (
+              <div className="deployment-section" style={{ width: '100%' }}>
+                <DeploymentCenter campaigns={campaigns} userSocials={settings.socials || {}} onUpdateSocials={handleUpdateSocials} showToast={showToast} />
               </div>
             )}
           </div>
         </div>
       </div>
+      {/* Toast notification */}
+      {showToast.message && (
+        <div style={{ position: 'fixed', top: 24, right: 32, zIndex: 9999, minWidth: 280, background: showToast.type === 'success' ? 'linear-gradient(90deg, #10b981 0%, #2563eb 100%)' : showToast.type === 'error' ? '#ef4444' : showToast.type === 'warning' ? '#f59e42' : '#2563eb', color: '#fff', padding: '1rem 2rem', borderRadius: 12, fontWeight: 700, fontSize: '1.08rem', boxShadow: '0 4px 24px rgba(37,99,235,0.13)', transition: 'opacity 0.2s, transform 0.2s', opacity: showToast.message ? 1 : 0, display: 'flex', alignItems: 'center', gap: 14, transform: showToast.message ? 'translateY(0)' : 'translateY(-20px)' }}>
+          <span style={{ fontSize: 22, display: 'flex', alignItems: 'center' }}>
+            {showToast.type === 'success' && '✅'}
+            {showToast.type === 'error' && '❌'}
+            {showToast.type === 'warning' && '⚠️'}
+            {showToast.type === 'info' && 'ℹ️'}
+          </span>
+          <span>{showToast.message}</span>
+        </div>
+      )}
     </>
   );
 };
 
 // Wrapped component with error boundary
-const CampaignDashboardWithErrorBoundary = () => (
+const CampaignDashboardWithErrorBoundary = (props) => (
   <ErrorBoundary>
-    <CampaignDashboard />
+    <CampaignDashboard {...props} />
   </ErrorBoundary>
 );
 

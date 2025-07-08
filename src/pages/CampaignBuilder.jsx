@@ -276,30 +276,8 @@ const CampaignBuilder = () => {
         console.error('User ID not found, cannot save campaign to Firestore subcollection');
       }
       
-      // Show success message with AI content preview
-      if (result.aiContent) {
-        const aiContent = result.aiContent;
-        let successMessage = '🎉 Campaign created successfully!\n\n';
-        successMessage += '🤖 AI has generated content for your campaign:\n\n';
-        
-        if (aiContent.captions?.instagram) {
-          successMessage += `📸 Instagram Caption:\n${aiContent.captions.instagram.substring(0, 100)}...\n\n`;
-        }
-        
-        if (aiContent.adCopy) {
-          successMessage += `📢 Ad Copy:\n${aiContent.adCopy.substring(0, 100)}...\n\n`;
-        }
-        
-        if (aiContent.hashtags) {
-          successMessage += `🏷️ Hashtags:\n${aiContent.hashtags.substring(0, 100)}...\n\n`;
-        }
-        
-        successMessage += 'Redirecting to your campaign dashboard...';
-        
-        alert(successMessage);
-      } else {
-        alert('🎉 Campaign created successfully! Redirecting to your dashboard...');
-      }
+      // Only show a generic success message, never AI content in alerts
+      alert('🎉 Campaign created successfully! Redirecting to your dashboard...');
       
       // Add a small delay to ensure the alert is shown before redirect
       setTimeout(() => {

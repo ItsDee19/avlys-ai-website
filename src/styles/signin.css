@@ -164,3 +164,47 @@
 .google-button:hover {
   background-color: #357abd;
 }
+
+.signin-fullpage {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  padding-top: 40px;
+  padding-bottom: 60px;
+  box-sizing: border-box;
+}
+
+.signin-fullpage .modal-content {
+  background: rgba(24, 24, 28, 0.97);
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  padding: 2.5rem 2.2rem 2rem 2.2rem;
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+  color: #fff;
+  position: relative;
+}
+
+.signin-fullpage .close-button {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #fff;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.signin-fullpage .close-button:hover {
+  opacity: 1;
+}

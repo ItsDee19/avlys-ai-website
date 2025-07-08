@@ -1,34 +1,62 @@
 # Avyls AI Website
 
-## Description
-Official website for AvylsAI, built with React and Vite.
+## Project Description
+Avyls AI Website is an AI-powered marketing campaign management web application. It enables users to create, manage, analyze, and deploy marketing campaigns with AI-generated content and real-time analytics. The dashboard provides campaign performance metrics, visualizations, and management tools, all integrated with user authentication and real-time data updates.
+
+## Features
+- User authentication (Firebase Auth)
+- Create, view, and manage marketing campaigns
+- AI-generated content (captions, ad copy, images)
+- Real-time analytics and performance metrics
+- Interactive charts and data visualizations
+- Campaign deployment center
+- Responsive, modern UI
+
+## Tech Stack
+| Technology         | Function/Role                                      |
+|--------------------|----------------------------------------------------|
+| React              | Frontend UI framework                              |
+| React Router       | Client-side routing/navigation                     |
+| Chart.js, Recharts | Data visualization and analytics                   |
+| Lucide-react       | UI icons                                           |
+| CSS                | Styling                                            |
+| Vite               | Frontend build tool/dev server                     |
+| Node.js/Express    | Backend API, business logic                        |
+| Firebase Firestore | Real-time database for campaigns/users             |
+| Firebase Auth      | User authentication                                |
+| LangchainService   | AI/LLM orchestration for content generation        |
+| Jest               | Testing framework                                  |
+| JWT                | Authentication tokens                              |
+| LocalStorage       | Client-side settings persistence                   |
 
 ## Prerequisites
 - Node.js (v16 or higher)
-- MongoDB
+- Firebase project (Firestore & Auth enabled)
 
-## Tech Stack
-- React + Vite
-- MongoDB
-- Express.js
-- Firebase Authentication
-
-## Installation
+## Installation & Setup
 1. Clone the repository
+   ```bash
+   git clone https://github.com/your-username/avyls-ai-website.git
+   cd avyls-ai-website
+   ```
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+3. Set up Firebase:
+   - Create a Firebase project
+   - Enable Firestore and Authentication
+   - Copy your Firebase config to `src/config/firebase.js` and `server/config/firebase.js`
+4. Start the development server
+   ```bash
+   npm run dev
+   ```
+
+## Testing
+Run tests with:
 ```bash
-git clone https://github.com/your-username/avyls-ai-website.git
-cd avyls-ai-website
+npm test
 ```
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# avlys-ai-website
-Official Repo for AvlysAI website.
+## License
+MIT

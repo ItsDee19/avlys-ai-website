@@ -328,45 +328,51 @@ function Home() {
         <div className="workflow-container">
           <div className="workflow-steps">
             {[
-              { 
+              {
                 name: "Prompt",
                 description: "Your brief instruction",
-                icon: "💬",
+                image: "/assets/workflow/prompt.png",
+                alt: "Prompt step image",
                 highlight: "Natural language input"
               },
-              { 
+              {
                 name: "Research Agent",
                 description: "Analyzes trends & audience",
-                icon: "🔍",
+                image: "/assets/workflow/research.png",
+                alt: "Research agent image",
                 highlight: "Real-time market analysis"
               },
-              { 
+              {
                 name: "Content Agent",
                 description: "Creates tailored messaging",
-                icon: "✍️",
+                image: "/assets/workflow/content.png",
+                alt: "Content agent image",
                 highlight: "AI-powered creativity"
               },
-              { 
+              {
                 name: "Translation Agent",
                 description: "Localizes to dialects",
-                icon: "🌏",
+                image: "/assets/workflow/translation.png",
+                alt: "Translation agent image",
                 highlight: "Cultural adaptation"
               },
-              { 
+              {
                 name: "Publishing Agent",
                 description: "Deploys across platforms",
-                icon: "🚀",
+                image: "/assets/workflow/publishing.png",
+                alt: "Publishing agent image",
                 highlight: "Automated deployment"
               },
-              { 
+              {
                 name: "Analytics Agent",
                 description: "Tracks & optimizes performance",
-                icon: "📊",
+                image: "/assets/workflow/analytics.png",
+                alt: "Analytics agent image",
                 highlight: "Smart optimization"
               }
             ].map((step, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="workflow-step glass-effect"
                 style={{
                   animationDelay: `${index * 0.2}s`
@@ -376,7 +382,7 @@ function Home() {
                   <span>{index + 1}</span>
                 </div>
                 <div className="step-icon">
-                  <span>{step.icon}</span>
+                  <img src={step.image} alt={step.alt} style={{ width: 48, height: 48, objectFit: 'contain' }} />
                 </div>
                 <h3>{step.name}</h3>
                 <p>{step.description}</p>
