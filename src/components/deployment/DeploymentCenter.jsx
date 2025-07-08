@@ -7,6 +7,7 @@ import DeploymentStatusMonitor from './DeploymentStatusMonitor';
 import DeploymentHistory from './DeploymentHistory';
 import { Rocket, ListChecks, Eye, History, CheckCircle } from 'lucide-react';
 import AuthUtils from '../../utils/authUtils';
+import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin, FaTiktok, FaYoutube } from 'react-icons/fa';
 
 export default function DeploymentCenter({ campaigns = [], userSocials = {}, onUpdateSocials, showToast }) {
   const { user } = useAuth();
@@ -387,93 +388,124 @@ export default function DeploymentCenter({ campaigns = [], userSocials = {}, onU
                 <div
                   key={cid}
                   style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.85) 70%, #e0e7ff 100%)',
-                    borderRadius: 20,
-                    boxShadow: '0 8px 32px 0 rgba(31,41,55,0.10)',
-                    padding: '1.3rem 1.4rem 1.1rem 1.4rem',
-                    minHeight: 120,
+                    background: '#fff',
+                    borderRadius: 14,
+                    boxShadow: '0 2px 8px rgba(31,41,55,0.06)',
+                    padding: '1.1rem 1.1rem 0.9rem 1.1rem',
+                    minHeight: 110,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 10,
                     alignItems: 'flex-start',
-                    border: '2.5px solid #e0e7ff',
+                    border: '1px solid #e5e7eb',
                     position: 'relative',
-                    backdropFilter: 'blur(8px)',
-                    transition: 'box-shadow 0.22s, border 0.22s, transform 0.22s, opacity 0.5s',
+                    transition: 'box-shadow 0.18s, border 0.18s, transform 0.18s',
                     overflow: 'hidden',
                     opacity: 0,
                     animation: `fadeInCard 0.7s ${0.1 + idx * 0.08}s forwards`,
+                    cursor: 'pointer',
                   }}
                   tabIndex={0}
-                  onMouseOver={e => { e.currentTarget.style.boxShadow = '0 12px 32px 0 rgba(37,99,235,0.13)'; e.currentTarget.style.transform = 'scale(1.025)'; }}
-                  onMouseOut={e => { e.currentTarget.style.boxShadow = '0 8px 32px 0 rgba(31,41,55,0.10)'; e.currentTarget.style.transform = 'scale(1)'; }}
-                  onFocus={e => { e.currentTarget.style.outline = '3px solid #2563eb'; e.currentTarget.style.background = '#f1f5f9'; }}
-                  onBlur={e => { e.currentTarget.style.outline = 'none'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.85) 70%, #e0e7ff 100%)'; }}
+                  onMouseOver={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,99,235,0.10)'; e.currentTarget.style.transform = 'scale(1.01)'; e.currentTarget.style.border = '1.5px solid #a5b4fc'; }}
+                  onMouseOut={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(31,41,55,0.06)'; e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.border = '1px solid #e5e7eb'; }}
+                  onFocus={e => { e.currentTarget.style.outline = '2px solid #6366f1'; }}
+                  onBlur={e => { e.currentTarget.style.outline = 'none'; }}
                 >
-                  {/* Status badge */}
+                  {/* Minimal status badge */}
                   <span style={{
                     position: 'absolute',
-                    top: 16,
-                    right: 16,
-                    background: statusStyle.bg,
-                    color: statusStyle.color,
-                    borderRadius: 8,
-                    padding: '0.3em 0.9em',
-                    fontWeight: 700,
-                    fontSize: '0.98rem',
+                    top: 12,
+                    right: 12,
+                    background: '#f3f4f6',
+                    color: '#64748b',
+                    borderRadius: 6,
+                    padding: '0.18em 0.7em',
+                    fontWeight: 600,
+                    fontSize: '0.93rem',
                     zIndex: 2,
-                    boxShadow: '0 1px 4px #2563eb08',
+                    border: '1px solid #e5e7eb',
+                    letterSpacing: '0.01em',
+                    textTransform: 'capitalize',
                   }}>{status}</span>
                   {/* Avatar + Title row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
                     {/* Avatar */}
                     <div style={{
-                      width: 44,
-                      height: 44,
+                      width: 36,
+                      height: 36,
                       borderRadius: '50%',
-                      background: c?.avatarUrl ? 'none' : '#e0e7ff',
+                      background: c?.avatarUrl ? 'none' : '#f3f4f6',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 22,
-                      fontWeight: 900,
-                      color: '#2563eb',
-                      boxShadow: '0 1px 4px #2563eb11',
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: '#6366f1',
                       overflow: 'hidden',
                     }}>
                       {c?.avatarUrl ? (
                         <img src={c.avatarUrl} alt={c.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                       ) : (
-                        c?.title ? c.title[0].toUpperCase() : <CheckCircle size={22} color="#10b981" />
+                        c?.title ? c.title[0].toUpperCase() : <CheckCircle size={18} color="#a5b4fc" />
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: '#1e293b', fontWeight: 800, fontSize: '1.13rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={c?.title}>{c?.title || 'Untitled'}</div>
-                      <div style={{ color: '#64748b', fontWeight: 500, fontSize: '0.98rem', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c?.campaignGoal || 'No goal set'}</div>
+                      <div style={{ color: '#222', fontWeight: 700, fontSize: '1.08rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={c?.title}>{c?.title || 'Untitled'}</div>
+                      <div style={{ color: '#64748b', fontWeight: 400, fontSize: '0.97rem', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c?.campaignGoal || 'No goal set'}</div>
                     </div>
                     {/* View Details button */}
                     <button
                       title="View Details"
                       style={{
-                        background: 'rgba(37,99,235,0.08)',
+                        background: 'none',
                         border: 'none',
-                        borderRadius: 8,
-                        padding: 6,
-                        marginLeft: 8,
+                        borderRadius: 6,
+                        padding: 4,
+                        marginLeft: 6,
                         cursor: 'pointer',
-                        transition: 'background 0.15s',
+                        transition: 'background 0.12s',
                         display: 'flex',
                         alignItems: 'center',
                       }}
                       tabIndex={-1}
-                      onMouseOver={e => e.currentTarget.style.background = '#e0e7ff'}
-                      onMouseOut={e => e.currentTarget.style.background = 'rgba(37,99,235,0.08)'}
+                      onMouseOver={e => e.currentTarget.style.background = '#f3f4f6'}
+                      onMouseOut={e => e.currentTarget.style.background = 'none'}
                     >
-                      <Eye size={18} color="#2563eb" />
+                      <Eye size={16} color="#6366f1" />
                     </button>
                   </div>
-                  {/* Metrics row */}
-                  <div style={{ display: 'flex', gap: 18, marginTop: 6, color: '#64748b', fontWeight: 600, fontSize: '0.97rem', flexWrap: 'wrap' }}>
+                  {/* Minimal platform chips with icons */}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {(c?.platforms || []).map((p, idx) => {
+                      const iconMap = {
+                        Facebook: <FaFacebook size={15} color="#1877f2" style={{ marginRight: 3 }} />,
+                        Instagram: <FaInstagram size={15} color="#e1306c" style={{ marginRight: 3 }} />,
+                        Twitter: <FaTwitter size={15} color="#1da1f2" style={{ marginRight: 3 }} />,
+                        LinkedIn: <FaLinkedin size={15} color="#0a66c2" style={{ marginRight: 3 }} />,
+                        YouTube: <FaYoutube size={15} color="#ff0000" style={{ marginRight: 3 }} />,
+                      };
+                      return (
+                        <span key={idx} style={{
+                          background: '#f3f4f6',
+                          color: '#222',
+                          borderRadius: 999,
+                          padding: '0.18em 0.7em 0.18em 0.5em',
+                          fontWeight: 500,
+                          fontSize: '0.93rem',
+                          letterSpacing: '0.01em',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          border: 'none',
+                        }}>
+                          {iconMap[p] || null}
+                          {p}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {/* Minimal metrics row */}
+                  <div style={{ display: 'flex', gap: 12, marginTop: 6, color: '#64748b', fontWeight: 500, fontSize: '0.95rem', flexWrap: 'wrap' }}>
                     <span title="Reach">👁️ {c?.reach ? c.reach.toLocaleString() : '-'}</span>
                     <span title="Engagement">💬 {c?.engagement ? c.engagement + '%' : '-'}</span>
                     <span title="Budget">💰 {c?.budget ? `₹${c.budget.toLocaleString()}` : '-'}</span>
@@ -488,63 +520,88 @@ export default function DeploymentCenter({ campaigns = [], userSocials = {}, onU
           <div style={{ fontWeight: 700, color: '#10b981', marginBottom: 8, fontSize: '1.08rem' }}>Platforms</div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', width: '100%' }}>
             {[
-              { name: 'Facebook', icon: <span style={{ color: '#1877f2', fontWeight: 900, fontSize: 22 }}>📘</span> },
-              { name: 'Instagram', icon: <span style={{ color: '#e1306c', fontWeight: 900, fontSize: 22 }}>📸</span> },
-              { name: 'Twitter', icon: <span style={{ color: '#1da1f2', fontWeight: 900, fontSize: 22 }}>🐦</span> },
-              { name: 'LinkedIn', icon: <span style={{ color: '#0a66c2', fontWeight: 900, fontSize: 22 }}>💼</span> },
-              { name: 'TikTok', icon: <span style={{ color: '#000', fontWeight: 900, fontSize: 22 }}>🎵</span> },
-              { name: 'YouTube', icon: <span style={{ color: '#ff0000', fontWeight: 900, fontSize: 22 }}>▶️</span> },
+              { name: 'Facebook', icon: <FaFacebook size={22} color="#1877f2" /> },
+              { name: 'Instagram', icon: <FaInstagram size={22} color="#e1306c" /> },
+              { name: 'Twitter', icon: <FaTwitter size={22} color="#1da1f2" /> },
+              { name: 'LinkedIn', icon: <FaLinkedin size={22} color="#0a66c2" /> },
+              { name: 'YouTube', icon: <FaYoutube size={22} color="#ff0000" /> },
             ].map((platformObj, idx) => {
               const platform = platformObj.name;
               const isConnected = !!userSocials[platform.toLowerCase()];
               const isSelected = selectedPlatforms.includes(platform);
               return (
-                <div key={platform} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 140 }}>
+                <div
+                  key={platform}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 110 }}
+                >
                   <button
                     type="button"
                     onClick={() => isConnected ? handlePlatformSelect(platform) : handleConnectSocial(platform, '')}
                     disabled={deploying}
                     style={{
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 10,
+                      justifyContent: 'center',
+                      gap: 6,
                       background: isSelected && isConnected
-                        ? 'linear-gradient(90deg, #2563eb 0%, #10b981 100%)'
-                        : isConnected ? '#f1f5f9' : '#fee2e2',
-                      color: isSelected && isConnected ? '#fff' : isConnected ? '#2563eb' : '#ef4444',
-                      border: isSelected && isConnected ? '2.5px solid #10b981' : '2px solid #e0e7ff',
-                      borderRadius: 999,
-                      padding: '1.1rem 2.1rem',
+                        ? '#f3f4f6'
+                        : isConnected ? '#fff' : '#fee2e2',
+                      color: isSelected && isConnected ? '#222' : isConnected ? '#6366f1' : '#ef4444',
+                      border: isSelected && isConnected ? '1.5px solid #6366f1' : '1px solid #e5e7eb',
+                      borderRadius: 12,
+                      padding: '0.8rem 0.8rem',
                       fontWeight: 700,
-                      fontSize: '1.08rem',
-                      boxShadow: isSelected && isConnected ? '0 4px 16px #10b98133' : '0 1px 4px #2563eb08',
+                      fontSize: '1.02rem',
+                      boxShadow: isSelected && isConnected ? '0 2px 8px #6366f122' : '0 1px 4px #2563eb08',
                       cursor: deploying ? 'not-allowed' : isConnected ? 'pointer' : 'pointer',
                       opacity: deploying ? 0.7 : isConnected ? 1 : 0.7,
-                      transition: 'background 0.22s, color 0.22s, border 0.22s, box-shadow 0.22s, transform 0.22s',
-                      outline: isSelected ? '3px solid #10b981' : 'none',
+                      transition: 'background 0.18s, color 0.18s, border 0.18s, box-shadow 0.18s, transform 0.18s',
+                      outline: isSelected ? '2px solid #6366f1' : 'none',
                       position: 'relative',
-                      minWidth: 120,
-                      marginBottom: 6,
+                      minWidth: 90,
+                      marginBottom: 4,
                       boxSizing: 'border-box',
                       animation: `fadeInPill 0.7s ${0.2 + idx * 0.08}s forwards`,
                     }}
                     title={isConnected ? `Click to ${isSelected ? 'deselect' : 'select'} ${platform}` : 'Connect this account to enable deployment'}
                     tabIndex={0}
-                    onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 3px #10b98155'; e.currentTarget.style.transform = 'scale(1.04)'; }}
-                    onBlur={e => { e.currentTarget.style.boxShadow = isSelected && isConnected ? '0 4px 16px #10b98133' : '0 1px 4px #2563eb08'; e.currentTarget.style.transform = 'scale(1)'; }}
-                    onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.04)'; }}
+                    onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 2px #6366f155'; e.currentTarget.style.transform = 'scale(1.03)'; }}
+                    onBlur={e => { e.currentTarget.style.boxShadow = isSelected && isConnected ? '0 2px 8px #6366f122' : '0 1px 4px #2563eb08'; e.currentTarget.style.transform = 'scale(1)'; }}
+                    onMouseOver={e => { e.currentTarget.style.transform = 'scale(1.03)'; }}
                     onMouseOut={e => { e.currentTarget.style.transform = 'scale(1)'; }}
                   >
-                    {platformObj.icon}
-                    <span style={{ fontWeight: 800, fontSize: '1.08rem', marginLeft: 8 }}>{platform}</span>
+                    <div style={{ position: 'relative', marginBottom: 4 }}>
+                      {platformObj.icon}
+                      {isSelected && isConnected && (
+                        <span style={{
+                          position: 'absolute',
+                          top: -7,
+                          right: -7,
+                          background: '#6366f1',
+                          color: '#fff',
+                          borderRadius: '50%',
+                          width: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          boxShadow: '0 1px 4px #6366f122',
+                          border: '1.5px solid #fff',
+                        }}>✔</span>
+                      )}
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '0.98rem', marginTop: 1 }}>{platform}</span>
                     {isConnected ? (
                       isSelected ? (
-                        <span style={{ marginLeft: 10, color: '#fff', fontWeight: 900, fontSize: 18 }} title="Connected and selected">✔</span>
+                        <span style={{ marginTop: 4, color: '#6366f1', fontWeight: 700, fontSize: 14 }} title="Connected and selected">Connected</span>
                       ) : (
-                        <span style={{ marginLeft: 10, color: '#10b981', fontWeight: 900, fontSize: 18 }} title="Connected">✔</span>
+                        <span style={{ marginTop: 4, color: '#a5b4fc', fontWeight: 700, fontSize: 14 }} title="Connected">Connected</span>
                       )
                     ) : (
-                      <span style={{ marginLeft: 10, color: '#ef4444', fontWeight: 900, fontSize: 18 }} title="Not connected">✖</span>
+                      <span style={{ marginTop: 4, color: '#ef4444', fontWeight: 700, fontSize: 14 }} title="Not connected">Not Connected</span>
                     )}
                   </button>
                   {!isConnected && (
@@ -557,15 +614,15 @@ export default function DeploymentCenter({ campaigns = [], userSocials = {}, onU
                         color: '#fff',
                         border: 'none',
                         borderRadius: 999,
-                        padding: '0.4rem 1.2rem',
-                        fontWeight: 700,
-                        fontSize: '0.97rem',
+                        padding: '0.3rem 1rem',
+                        fontWeight: 600,
+                        fontSize: '0.93rem',
                         boxShadow: '0 1px 4px #ef444422',
                         cursor: 'pointer',
                         opacity: 1,
-                        transition: 'background 0.18s, color 0.18s',
+                        transition: 'background 0.14s, color 0.14s',
                         outline: 'none',
-                        minWidth: 90,
+                        minWidth: 70,
                       }}
                       title={`Connect your ${platform} account`}
                     >

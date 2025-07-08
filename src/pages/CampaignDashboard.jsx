@@ -1281,17 +1281,89 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                           </div>
                             <h3 style={{ color: '#1e293b', fontSize: '1.18rem', fontWeight: 700, margin: 0 }}>{campaign.title}</h3>
                         </div>
-                          <div className="campaign-card-actions">
-                            <button className="card-action-btn edit" title="Edit" aria-label="Edit campaign" onClick={() => handleEditCampaign(campaign)} tabIndex={0}>
-                              <Edit2 size={22} strokeWidth={2.2} />
+                          <div className="campaign-card-actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <button
+                              className="card-action-btn edit"
+                              title="Edit campaign"
+                              aria-label="Edit campaign"
+                              onClick={() => handleEditCampaign(campaign)}
+                              tabIndex={0}
+                              style={{
+                                background: '#2563eb1a',
+                                color: '#2563eb',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: 38,
+                                height: 38,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 1px 4px #2563eb22',
+                                transition: 'background 0.18s, color 0.18s',
+                                cursor: 'pointer',
+                                fontSize: 0,
+                                outline: 'none',
+                              }}
+                              onMouseOver={e => e.currentTarget.style.background = '#2563eb33'}
+                              onMouseOut={e => e.currentTarget.style.background = '#2563eb1a'}
+                            >
+                              <Edit2 size={20} strokeWidth={2.2} />
                             </button>
-                            <button className="card-action-btn copy" title="Duplicate" aria-label="Duplicate campaign" onClick={() => handleDuplicateCampaign(campaign)} tabIndex={0}>
-                              <Copy size={22} strokeWidth={2.2} />
+                            <button
+                              className="card-action-btn copy"
+                              title="Duplicate campaign"
+                              aria-label="Duplicate campaign"
+                              onClick={() => handleDuplicateCampaign(campaign)}
+                              tabIndex={0}
+                              style={{
+                                background: '#a259f71a',
+                                color: '#a259f7',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: 38,
+                                height: 38,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 1px 4px #a259f733',
+                                transition: 'background 0.18s, color 0.18s',
+                                cursor: 'pointer',
+                                fontSize: 0,
+                                outline: 'none',
+                              }}
+                              onMouseOver={e => e.currentTarget.style.background = '#a259f733'}
+                              onMouseOut={e => e.currentTarget.style.background = '#a259f71a'}
+                            >
+                              <Copy size={20} strokeWidth={2.2} />
                             </button>
-                            <button className="card-action-btn delete" title="Delete" aria-label="Delete campaign" onClick={() => handleDeleteCampaign(campaign)} tabIndex={0}>
-                              <Trash2 size={22} strokeWidth={2.2} />
+                            <button
+                              className="card-action-btn delete"
+                              title="Delete campaign"
+                              aria-label="Delete campaign"
+                              onClick={() => handleDeleteCampaign(campaign)}
+                              tabIndex={0}
+                              style={{
+                                background: '#ef44441a',
+                                color: '#ef4444',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: 38,
+                                height: 38,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 1px 4px #ef444422',
+                                transition: 'background 0.18s, color 0.18s',
+                                cursor: 'pointer',
+                                fontSize: 0,
+                                outline: 'none',
+                              }}
+                              onMouseOver={e => e.currentTarget.style.background = '#ef444433'}
+                              onMouseOut={e => e.currentTarget.style.background = '#ef44441a'}
+                            >
+                              <Trash2 size={20} strokeWidth={2.2} />
                             </button>
-                        </div>
+                          </div>
                       </div>
                         <div style={{ color: '#334155', fontSize: '1.02rem', marginBottom: 8 }}>{campaign.campaignGoal || '-'}</div>
                         <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: 8 }}>
@@ -1332,7 +1404,64 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                           {campaign.aiContent.adCopy && (
                             <div style={{ marginBottom: 6 }}>
                                 <strong style={{ color: '#2563eb' }}>Ad Copy:</strong>
-                              <div style={{ color: '#222', marginTop: 2 }}>{campaign.aiContent.adCopy}</div>
+                              <ul style={{
+                                margin: '10px 0 0 0',
+                                padding: 0,
+                                listStyle: 'none',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1.1rem',
+                              }}>
+                                {(() => {
+                                  // Split ad copy string into array by '**Ad Copy X:**'
+                                  const adCopySections = campaign.aiContent.adCopy
+                                    .split(/\*\*Ad Copy \d+:\*\*/g)
+                                    .map(s => s.trim())
+                                    .filter(Boolean);
+                                  // Get the titles (Ad Copy 1, 2, etc.)
+                                  const adCopyTitles = [...campaign.aiContent.adCopy.matchAll(/\*\*(Ad Copy \d+):\*\*/g)].map(m => m[1]);
+                                  return adCopySections.map((copy, idx) => (
+                                    <li key={idx} style={{
+                                      background: '#f3f4f6',
+                                      borderRadius: 10,
+                                      padding: '1rem 1.2rem',
+                                      boxShadow: '0 1px 4px rgba(37,99,235,0.07)',
+                                      display: 'flex',
+                                      alignItems: 'flex-start',
+                                      justifyContent: 'space-between',
+                                      gap: '1.2rem',
+                                      position: 'relative',
+                                    }}>
+                                      <div style={{ flex: 1 }}>
+                                        <span style={{ fontWeight: 700, color: '#a259f7', marginRight: 8 }}>{adCopyTitles[idx] || `Ad Copy ${idx+1}`}:</span>
+                                        <span style={{ color: '#222', whiteSpace: 'pre-line' }}>{copy}</span>
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(copy);
+                                          if (typeof showToast === 'function') showToast('Copied!');
+                                        }}
+                                        style={{
+                                          background: '#a259f7',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: 6,
+                                          padding: '0.45rem 0.9rem',
+                                          fontWeight: 600,
+                                          fontSize: '1rem',
+                                          cursor: 'pointer',
+                                          boxShadow: '0 1px 4px #a259f733',
+                                          transition: 'background 0.18s',
+                                          marginLeft: 10,
+                                        }}
+                                        title="Copy Ad Copy"
+                                      >
+                                        Copy
+                                      </button>
+                                    </li>
+                                  ));
+                                })()}
+                              </ul>
                             </div>
                           )}
                           {campaign.aiContent.hashtags && (

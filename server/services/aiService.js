@@ -528,7 +528,7 @@ class AIService {
       },
       {
         type: 'adCopy',
-        prompt: `You are an expert ad copywriter. Write a persuasive, high-converting ad copy for this campaign.\nBusiness: ${campaignData.businessIntro}\nGoal: ${campaignData.campaignGoal}\nBrand Vibe: ${campaignData.brandVibe}\nTarget Audience: ${campaignData.targetCustomer}\nBudget: ${campaignData.budget}\nHighlight the offer and benefits. Use a friendly, energetic tone. Limit to 2-3 sentences.`
+        prompt: `You are an expert ad copywriter. Write persuasive, high-converting ad copy for this campaign.\nBusiness: ${campaignData.businessIntro}\nGoal: ${campaignData.campaignGoal}\nBrand Vibe: ${campaignData.brandVibe}\nTarget Audience: ${campaignData.targetCustomer}\nBudget: ${campaignData.budget}\n${campaignData.preferredLanguages && campaignData.preferredLanguages.length > 0 ? `For each of the following languages, provide a separate ad copy version, clearly labeled (e.g., "Ad Copy in Hindi:", "Ad Copy in Marathi:"). Use natural, idiomatic, and culturally relevant language for each: ${campaignData.preferredLanguages.join(', ')}.` : ''}\nHighlight the offer and benefits. Use a friendly, energetic tone. Limit each ad copy to 2-3 sentences.`
       },
       {
         type: 'hashtags',
