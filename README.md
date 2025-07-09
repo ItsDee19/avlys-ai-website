@@ -1,3 +1,11 @@
+# License Notice
+
+This repository is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+**Unauthorized copying, use, or distribution of this code is not permitted except under the terms of the AGPL-3.0 license.**
+
+For more details, see the LICENSE file.
+
 # Avyls AI Website
 
 ## Project Description
