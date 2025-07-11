@@ -25,9 +25,8 @@ describe('AiCampaignCreator', () => {
     // Reset mocks before each test
     jest.clearAllMocks();
     global.fetch.mockClear();
-    // Mock window.location.href
-    delete window.location;
-    window.location = { href: '' };
+    // Reset window.location.href
+    window.location.href = '';
   });
 
   it('shows an error if the user is not logged in', async () => {
