@@ -7,7 +7,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 import './CampaignDashboard.css';
 import { subscribeToCampaigns, subscribeToUserCampaigns } from '../utils/firestoreUtils';
 import AuthUtils from '../utils/authUtils';
-import { collection, query, where, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import Header from '../components/Header.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
@@ -17,6 +17,10 @@ import { TrendingUp, Eye, MousePointerClick, Target, DollarSign, Activity, Edit2
 import { Plus } from 'lucide-react';
 import DeploymentCenter from '../components/deployment/DeploymentCenter';
 import { useToast } from '../components/ToastProvider';
+import ImageGallery from '../components/ImageGallery';
+import pauseIcon from '../assets/pause.svg';
+import playIcon from '../assets/play.svg';
+import trashIcon from '../assets/trash.svg';
 
 // Memoized metric card component for better performance
 const MetricCard = memo(({
@@ -468,6 +472,30 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
       } catch (err) {
         showToast('Failed to delete campaign. Please try again.', 'error');
       }
+    }
+  };
+
+  const handleResume = (id) => {
+    // TODO: Implement resume logic (API call or state update)
+    console.log('Resume campaign', id);
+  };
+
+  const handlePause = (id) => {
+    // TODO: Implement pause logic (API call or state update)
+    console.log('Pause campaign', id);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this campaign?')) return;
+    try {
+      await deleteDoc(doc(db, 'campaigns', id));
+      // Optionally, show a toast or notification
+      if (typeof showToast === 'function') showToast('Campaign deleted!', 'success');
+      // Optionally, update local state if you want instant UI feedback:
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      if (typeof showToast === 'function') showToast('Failed to delete campaign.', 'error');
     }
   };
 
@@ -1244,6 +1272,34 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                             <td style={{ padding: '0.9rem 0.7rem', textAlign: 'center' }}>
                               {/* Actions: view, edit, duplicate, play/pause, delete (icons, tooltips) */}
                               {/* TODO: Add icons and handlers here */}
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '10px'
+                              }}>
+                                <button
+                                  title="Resume"
+                                  onClick={() => handleResume(campaign.id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                >
+                                  <img src={playIcon} alt="Resume" width={18} height={18} />
+                                </button>
+                                <button
+                                  title="Pause"
+                                  onClick={() => handlePause(campaign.id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                >
+                                  <img src={pauseIcon} alt="Pause" width={18} height={18} />
+                                </button>
+                                <button
+                                  title="Delete"
+                                  onClick={() => handleDelete(campaign.id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                >
+                                  <img src={trashIcon} alt="Delete" width={18} height={18} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1382,18 +1438,16 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                             color: '#222',
                             overflow: 'hidden',
                           }}>
-                            {/* Image Gallery */}
-                            {(campaign.aiContent.images && Array.isArray(campaign.aiContent.images) && campaign.aiContent.images.length > 0) ? (
-                              <div style={{ display: 'flex', gap: 12, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
-                                {campaign.aiContent.images.map((img, idx) => (
-                                  <img key={idx} src={img} alt={`AI Generated ${idx + 1}`} style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8, boxShadow: '0 1px 6px rgba(37,99,235,0.08)' }} />
-                                ))}
-                              </div>
-                            ) : campaign.aiContent.imageUrl ? (
+                            {/* AI Generated Images */}
+                            <div style={{ marginBottom: 16 }}>
                               <div style={{ marginBottom: 12 }}>
-                                <img src={campaign.aiContent.imageUrl} alt="AI Generated" style={{ maxWidth: 180, maxHeight: 120, borderRadius: 8, boxShadow: '0 1px 6px rgba(37,99,235,0.08)' }} />
+                                <h4 style={{ margin: 0, color: '#2563eb', fontWeight: 600 }}>AI Generated Images</h4>
                               </div>
-                            ) : null}
+                              <ImageGallery 
+                                images={campaign.generatedImages || []} 
+                                title=""
+                              />
+                            </div>
                             {/* Captions, Ad Copy, Hashtags */}
                           {campaign.aiContent.captions && (
                             <div style={{ marginBottom: 6 }}>

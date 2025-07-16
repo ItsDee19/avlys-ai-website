@@ -229,7 +229,7 @@ router.post('/image-prompts', authenticateUser, async (req, res) => {
   }
 });
 
-// Generate images using DALL-E
+// Generate images using AI ML
 router.post('/images', authenticateUser, async (req, res) => {
   try {
     const { prompt, options = {} } = req.body;
@@ -238,7 +238,12 @@ router.post('/images', authenticateUser, async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    console.log('Generating image with prompt:', prompt);
+    console.log('Options:', options);
+
     const result = await aiService.generateImage(prompt, options);
+    
+    console.log('Image generation result:', result);
     
     res.json({
       status: 'success',
@@ -247,6 +252,41 @@ router.post('/images', authenticateUser, async (req, res) => {
     });
   } catch (error) {
     console.error('Image generation error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    res.status(500).json({ 
+      error: error.message,
+      details: error.response?.data || 'No additional details available'
+    });
+  }
+});
+
+// Generate multiple images using Replicate
+router.post('/images/multiple', authenticateUser, async (req, res) => {
+  try {
+    const { prompt, count = 4, options = {} } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const results = await aiService.generateImage(prompt, { 
+      ...options, 
+      count: count,
+      provider: 'aiml'
+    });
+    
+    res.json({
+      status: 'success',
+      type: 'multiple_images',
+      count: Array.isArray(results) ? results.length : 1,
+      results: results
+    });
+  } catch (error) {
+    console.error('Multiple image generation error:', error);
     res.status(500).json({ error: error.message });
   }
 });

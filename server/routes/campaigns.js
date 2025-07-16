@@ -205,8 +205,8 @@ router.post('/:id/regenerate-content', authenticateUser, async (req, res) => {
         imagePrompts: aiResults[8].status === 'fulfilled' ? aiResults[8].value.content : null
       };
 
-      // Generate AI images if OpenAI is available
-      if (aiContent.imagePrompts && process.env.OPENAI_API_KEY) {
+      // Generate AI images if image prompts are available
+      if (aiContent.imagePrompts) {
         try {
           console.log('Generating new AI images...');
           const imagePromises = [
@@ -230,6 +230,11 @@ router.post('/:id/regenerate-content', authenticateUser, async (req, res) => {
           };
         } catch (imageError) {
           console.error('Error generating AI images:', imageError);
+          console.error('Image error details:', {
+            message: imageError.message,
+            response: imageError.response?.data,
+            status: imageError.response?.status
+          });
           aiContent.images = { instagram: null, facebook: null };
         }
       } else {

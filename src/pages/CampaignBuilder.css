@@ -276,7 +276,6 @@
 }
 
 .size-label,
-.goal-label,
 .budget-label,
 .channel-label,
 .timeline-label {
@@ -301,8 +300,6 @@
 /* Ensure black text remains visible when options are NOT selected */
 .size-option:not(.selected) .size-label,
 .size-option:not(.selected) .size-desc,
-.goal-option:not(.selected) .goal-label,
-.goal-option:not(.selected) .goal-desc,
 .budget-option:not(.selected) .budget-label,
 .budget-option:not(.selected) .budget-desc,
 .channel-option:not(.selected) .channel-label,
@@ -315,8 +312,6 @@
 /* Keep white text for selected options */
 .size-option.selected .size-label,
 .size-option.selected .size-desc,
-.goal-option.selected .goal-label,
-.goal-option.selected .goal-desc,
 .budget-option.selected .budget-label,
 .budget-option.selected .budget-desc,
 .channel-option.selected .channel-label,
@@ -413,54 +408,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-  .campaign-builder-page {
-    padding: 1rem 0.5rem;
-  }
 
-  .wizard-container {
-    border-radius: 16px;
-  }
-
-  .wizard-header,
-  .wizard-content,
-  .wizard-navigation {
-    padding: 1.5rem 1rem;
-  }
-
-  .step-title {
-    font-size: 2rem;
-  }
-
-  .goals-grid,
-  .channels-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .wizard-navigation {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .nav-btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .step-title {
-    font-size: 1.75rem;
-  }
-
-  .size-option,
-  .goal-option,
-  .budget-option,
-  .channel-option,
-  .timeline-option {
-    padding: 1rem;
-  }
-}
 
 /* Budget Input Styles */
 .budget-input-section {
@@ -541,7 +489,12 @@
 
 .vibe-label {
   font-weight: 500;
-  color: #333;
+  color: #6b7280;
+  transition: color 0.3s ease;
+}
+
+.vibe-option.selected .vibe-label {
+  color: #000;
 }
 
 /* Languages Grid Styles */
@@ -588,7 +541,12 @@
 .language-label {
   font-size: 0.9rem;
   font-weight: 500;
-  color: #333;
+  color: #6b7280;
+  transition: color 0.3s ease;
+}
+
+.language-option.selected .language-label {
+  color: #000;
 }
 
 /* Superpowers Grid Styles */
@@ -645,8 +603,13 @@
 
 .superpower-label {
   font-weight: 500;
-  color: #333;
+  color: #6b7280;
   font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.superpower-option.selected .superpower-label {
+  color: #000;
 }
 
 /* Ad Type Grid Styles */
@@ -698,8 +661,13 @@
 
 .ad-type-label {
   font-weight: 500;
-  color: #333;
+  color: #6b7280;
   font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.ad-type-option.selected .ad-type-label {
+  color: #000;
 }
 
 /* Final Screen Styles */
@@ -809,27 +777,650 @@
 
 .goal-label {
   font-weight: 500;
-  color: #333;
+  color: #6b7280;
+  transition: color 0.3s ease;
 }
 
-/* Responsive adjustments */
+.goal-option.selected .goal-label {
+  color: #000;
+}
+
+
+
+/* Enhanced Mobile Responsive Styles - Complete Rewrite */
 @media (max-width: 768px) {
+  /* Base mobile optimizations */
+  .campaign-builder-page {
+    padding: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .wizard-container {
+    border-radius: 0;
+    margin: 0;
+    max-width: 100%;
+    min-height: 100vh;
+    box-shadow: none;
+  }
+
+  /* Header optimizations */
+  .wizard-header {
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .progress-bar {
+    height: 6px;
+    margin-bottom: 0.75rem;
+    border-radius: 3px;
+  }
+
+  .progress-text {
+    font-size: 0.75rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: center;
+  }
+
+  /* Content area optimizations */
+  .wizard-content {
+    padding: 1rem;
+    min-height: auto;
+    flex: 1;
+  }
+
+  .step-container {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  /* Step header mobile optimization */
+  .step-header {
+    text-align: left;
+    margin-bottom: 1.5rem;
+  }
+
+  .step-title {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin-bottom: 0.5rem;
+    text-align: left;
+  }
+
+  .step-question {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    text-align: left;
+  }
+
+  .step-subtitle {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  /* AI Response mobile optimization */
+  .ai-response {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .ai-avatar {
+    font-size: 1.25rem;
+    align-self: flex-start;
+  }
+
+  .ai-message p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  /* Input fields mobile optimization */
+  .input-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .input-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.375rem;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .wizard-input,
+  .wizard-select,
+  .wizard-textarea {
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border-width: 1px;
+  }
+
+  .wizard-textarea {
+    min-height: 80px;
+    resize: none;
+  }
+
+  .input-hint {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Grid layouts for mobile - single column */
+  .goals-grid,
   .vibe-grid,
   .superpowers-grid,
   .ad-type-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
-  
+
+  .languages-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* Option buttons mobile optimization */
+  .size-option,
+  .goal-option,
+  .budget-option,
+  .vibe-option,
+  .superpower-option,
+  .ad-type-option,
+  .language-option {
+    padding: 1rem;
+    min-height: 60px;
+    border-radius: 12px;
+    border-width: 1px;
+  }
+
+  .size-option {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  .size-info {
+    text-align: center;
+  }
+
+  .size-label {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .size-desc {
+    font-size: 0.8rem;
+  }
+
+  /* Icon sizes for mobile */
+  .goal-icon,
+  .vibe-icon,
+  .superpower-icon,
+  .ad-type-icon {
+    width: 20px !important;
+    height: 20px !important;
+    margin-bottom: 0.375rem;
+  }
+
+  .language-icon {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .size-icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Labels mobile optimization */
+  .goal-label,
+  .vibe-label,
+  .superpower-label,
+  .ad-type-label,
+  .language-label {
+    font-size: 0.85rem;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  /* Budget input mobile optimization */
+  .budget-input {
+    padding-left: 2rem !important;
+    font-size: 1rem;
+  }
+
+  .currency-symbol {
+    left: 0.75rem;
+    font-size: 1rem;
+  }
+
+  /* Section headers mobile optimization */
+  .goals-section h3,
+  .vibe-section h3,
+  .superpowers-section h3,
+  .ad-type-section h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    text-align: left;
+  }
+
+  /* Navigation mobile optimization */
+  .wizard-navigation {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    margin: 0 -1rem -1rem;
+    z-index: 10;
+  }
+
+  .nav-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    min-height: 48px;
+  }
+
+  /* Final screen mobile optimization */
+  .final-screen {
+    min-height: 50vh;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .success-content {
+    max-width: 100%;
+    padding: 1.5rem 1rem;
+    text-align: center;
+  }
+
+  .success-content h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .success-content p {
+    font-size: 0.9rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .success-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .final-cta-button {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    border-radius: 25px;
+    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  /* Loading screen mobile optimization */
+  .loading-text {
+    font-size: 1rem;
+  }
+
+  .loading-details {
+    font-size: 0.85rem;
+  }
+
+  .loading-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Extra small screens (phones) */
+@media (max-width: 480px) {
+  .campaign-builder-page {
+    padding: 0;
+  }
+
+  .wizard-container {
+    border-radius: 0;
+  }
+
+  .wizard-header,
+  .wizard-content {
+    padding: 0.75rem;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .step-question {
+    font-size: 0.9rem;
+  }
+
+  .step-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .step-header {
+    margin-bottom: 1rem;
+  }
+
+  /* Even smaller option buttons */
+  .size-option,
+  .goal-option,
+  .budget-option,
+  .vibe-option,
+  .superpower-option,
+  .ad-type-option {
+    padding: 0.875rem;
+    min-height: 56px;
+  }
+
+  .language-option {
+    padding: 0.75rem 0.5rem;
+    min-height: 48px;
+  }
+
+  /* Smaller inputs */
+  .wizard-input,
+  .wizard-select,
+  .wizard-textarea {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.95rem;
+  }
+
+  .wizard-textarea {
+    min-height: 70px;
+  }
+
+  /* Smaller navigation */
+  .nav-btn {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+
+  /* Smaller icons */
+  .goal-icon,
+  .vibe-icon,
+  .superpower-icon,
+  .ad-type-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .language-icon {
+    font-size: 1rem;
+  }
+
+  /* Smaller labels */
+  .goal-label,
+  .vibe-label,
+  .superpower-label,
+  .ad-type-label {
+    font-size: 0.8rem;
+  }
+
+  .language-label {
+    font-size: 0.75rem;
+  }
+
+  /* Smaller final screen */
+  .success-content h1 {
+    font-size: 1.25rem;
+  }
+
+  .success-content p {
+    font-size: 0.85rem;
+  }
+
+  .success-icon {
+    font-size: 2rem;
+  }
+
+  .final-cta-button {
+    padding: 0.75rem 1.75rem;
+    font-size: 0.95rem;
+  }
+
+  /* Budget input adjustments */
+  .budget-input {
+    padding-left: 1.75rem !important;
+    font-size: 0.95rem;
+  }
+
+  .currency-symbol {
+    left: 0.625rem;
+    font-size: 0.9rem;
+  }
+
+  /* Languages grid for very small screens */
+  .languages-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .campaign-builder-page {
+    padding: 0;
+  }
+
+  .wizard-container {
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .step-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .step-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .goals-grid,
+  .vibe-grid,
+  .superpowers-grid,
+  .ad-type-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .languages-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .wizard-content {
+    padding: 0.75rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .campaign-builder-page {
+    padding: 1.5rem 1rem;
+  }
+
+  .wizard-container {
+    max-width: 700px;
+  }
+
+  .step-title {
+    font-size: 2rem;
+  }
+
+  .goals-grid,
+  .vibe-grid,
+  .superpowers-grid,
+  .ad-type-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .languages-grid {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
-  
-  .success-content h1 {
-    font-size: 2rem;
+}
+
+/* Ensure proper touch targets on mobile */
+@media (max-width: 768px) {
+  .size-option,
+  .goal-option,
+  .budget-option,
+  .vibe-option,
+  .superpower-option,
+  .ad-type-option,
+  .language-option,
+  .nav-btn {
+    min-height: 44px; /* Minimum touch target size */
+  }
+
+  /* Prevent text selection on buttons */
+  .size-option,
+  .goal-option,
+  .budget-option,
+  .vibe-option,
+  .superpower-option,
+  .ad-type-option,
+  .language-option {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Improve button hover states for touch */
+  .size-option:active,
+  .goal-option:active,
+  .budget-option:active,
+  .vibe-option:active,
+  .superpower-option:active,
+  .ad-type-option:active,
+  .language-option:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* Fix for iOS Safari viewport issues */
+@supports (-webkit-touch-callout: none) {
+  .campaign-builder-page {
+    min-height: -webkit-fill-available;
   }
   
-  .final-cta-button {
-    padding: 0.875rem 2rem;
-    font-size: 1.1rem;
+  .wizard-container {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Additional Mobile-Specific Fixes */
+@media (max-width: 768px) {
+  /* Prevent zoom on input focus in iOS */
+  .wizard-input,
+  .wizard-select,
+  .wizard-textarea {
+    font-size: 16px !important;
+  }
+
+  /* Handle safe areas for notched devices */
+  .campaign-builder-page {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .wizard-navigation {
+    padding-left: calc(1rem + env(safe-area-inset-left));
+    padding-right: calc(1rem + env(safe-area-inset-right));
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  /* Improve scrolling performance */
+  .wizard-container {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better touch feedback */
+  .size-option,
+  .goal-option,
+  .budget-option,
+  .vibe-option,
+  .superpower-option,
+  .ad-type-option,
+  .language-option {
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.1);
+  }
+
+  /* Fix for sticky positioning issues */
+  .wizard-navigation {
+    position: -webkit-sticky;
+    position: sticky;
+  }
+
+  /* Ensure proper text rendering */
+  .step-title,
+  .step-question,
+  .step-subtitle,
+  .goal-label,
+  .vibe-label,
+  .superpower-label,
+  .ad-type-label,
+  .language-label {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Better focus states for accessibility */
+  .wizard-input:focus,
+  .wizard-select:focus,
+  .wizard-textarea:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+  }
+
+  /* Improve button accessibility */
+  .nav-btn:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+  }
+}
+
+/* Fix for Android Chrome address bar issues */
+@media (max-width: 768px) and (orientation: portrait) {
+  .campaign-builder-page {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+  }
+}
+
+/* Fix for landscape mode on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .campaign-builder-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  .wizard-container {
+    max-height: 100vh;
+    max-height: 100dvh;
   }
 }
