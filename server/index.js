@@ -59,7 +59,7 @@ const contactsRoutes = require('./routes/contacts');
 const newsletterRoutes = require('./routes/newsletter');
 const userRoutes = require('./routes/user');
 const profileRoutes = require('./routes/profile');
-const paymentRoutes = require('./routes/payments');
+// const paymentRoutes = require('./routes/payments');
 const analyticsRoutes = require('./routes/analytics');
 const deploymentsRoutes = require('./routes/deployments');
 
@@ -70,7 +70,7 @@ app.use('/api/contacts', contactsRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/payments', paymentRoutes);
+// app.use('/api/payments', paymentRoutes);
 app.use('/api', analyticsRoutes);
 app.use('/api/deployments', deploymentsRoutes);
 

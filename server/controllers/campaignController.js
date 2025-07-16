@@ -48,6 +48,7 @@ exports.createCampaign = async (req, res) => {
             campaignData.hashtags = typeof aiContent.hashtags === 'string' ? aiContent.hashtags : '';
             campaignData.adCopy = typeof aiContent.adCopy === 'string' ? aiContent.adCopy : '';
             campaignData.imageUrl = typeof aiContent.imageUrl === 'string' ? aiContent.imageUrl : '';
+            campaignData.generatedImages = aiContent.generatedImages || [];
             campaignData.aiContent = aiContent; // Store all raw AI content for reference
             console.log('AI content to be saved:', {
               caption: campaignData.caption,
@@ -134,7 +135,7 @@ exports.updateCampaign = async (req, res) => {
                     const refined = await aiService.generateContent('imagePrompt', promptDetails, { provider: 'mistral' });
                     imagePrompt = refined.content || promptDetails;
                 }
-                const imageResult = await aiService.generateImage(imagePrompt, { provider: 'replicate' });
+                const imageResult = await aiService.generateImage(imagePrompt, { provider: 'aiml' });
                 campaignData.imageUrl = imageResult.url;
             } catch (imgErr) {
                 console.error('Failed to regenerate campaign image:', imgErr);

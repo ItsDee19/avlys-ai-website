@@ -40,6 +40,7 @@ class AIService {
     if (process.env.MISTRAL_API_KEY) {
       this.providers.mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
     }
+
   }
 
   initializeProviders() {
@@ -72,6 +73,14 @@ class AIService {
       };
     }
 
+    // Initialize AI ML Image provider
+    if (process.env.AI_ML_API_KEY) {
+      this.providers.aiml = {
+        apiKey: process.env.AI_ML_API_KEY,
+        baseURL: 'https://api.aimlapi.com/v1/images/generations'
+      };
+    }
+
     console.log(`AI Service initialized with ${Object.keys(this.providers).length} providers`);
   }
 
@@ -81,6 +90,8 @@ class AIService {
     if (process.env.OPENROUTER_API_KEY) providers.push('openrouter');
     return providers;
   }
+
+
 
   // Generate content using multiple providers in parallel
   async generateContentParallel(type, prompt, options = {}) {
@@ -479,43 +490,120 @@ class AIService {
     };
   }
 
-  // Generate images using DALL-E or Replicate
+
+
+  // Generate images using DALL-E, Replicate, or AI ML
   async generateImage(imagePrompt, options = {}) {
-    // Force provider to 'replicate' for all images
-    const provider = 'replicate';
-    const { size = '1024x1024', quality = 'standard', style = 'vivid', model = 'stability-ai/sdxl' } = options;
+    const { provider = 'aiml', size = '1024x1024', quality = 'standard', style = 'vivid', model = 'stability-ai/sdxl', count = 1 } = options;
+    
     if (provider === 'replicate') {
       if (!this.providers.replicate) {
         throw new Error('Replicate provider not available for image generation');
       }
       try {
-        // Example: using SDXL for high-quality images
-        const output = await this.providers.replicate.run(
-          model, // e.g., 'stability-ai/sdxl'
-          {
-            input: {
-              prompt: imagePrompt,
-              width: parseInt(size.split('x')[0]),
-              height: parseInt(size.split('x')[1]),
-              // Add more parameters as needed
-            }
-          }
-        );
-        // Replicate returns an array of image URLs
-        return {
+        // Generate multiple images in parallel
+        const imagePromises = [];
+        for (let i = 0; i < count; i++) {
+          imagePromises.push(
+            this.providers.replicate.run(
+              model,
+              {
+                input: {
+                  prompt: imagePrompt,
+                  width: parseInt(size.split('x')[0]),
+                  height: parseInt(size.split('x')[1]),
+                  // Add seed for variety
+                  seed: Math.floor(Math.random() * 1000000),
+                  // Add more parameters as needed
+                }
+              }
+            )
+          );
+        }
+        
+        const outputs = await Promise.all(imagePromises);
+        
+        // Process all generated images
+        const images = outputs.map((output, index) => ({
           url: Array.isArray(output) ? output[0] : output,
           provider: 'replicate',
           model,
-          prompt: imagePrompt
-        };
+          prompt: imagePrompt,
+          index: index + 1
+        }));
+        
+        // Log generated image URLs
+        console.log(`[IMAGE GENERATION] Generated ${images.length} image(s) with Replicate:`);
+        images.forEach((image, index) => {
+          console.log(`[IMAGE ${index + 1}] URL: ${image.url}`);
+          console.log(`[IMAGE ${index + 1}] Model: ${image.model}`);
+          console.log(`[IMAGE ${index + 1}] Prompt: ${image.prompt}`);
+        });
+        
+        // Return single image if count is 1, otherwise return array
+        return count === 1 ? images[0] : images;
       } catch (error) {
         console.error('Error generating image with Replicate:', error);
-        throw error;
-      }
-    } else {
-      throw new Error(`Provider ${provider} not supported for image generation`);
-    }
-  }
+                          throw error;
+       }
+     } else if (provider === 'aiml') {
+       if (!this.providers.aiml) {
+         throw new Error('AI ML provider not available for image generation');
+       }
+       try {
+         // Generate multiple images in parallel for AI ML
+         const imagePromises = [];
+         for (let i = 0; i < count; i++) {
+           imagePromises.push(
+             axios.post(this.providers.aiml.baseURL, {
+               prompt: imagePrompt,
+               model: 'openai/gpt-image-1',
+               size: size
+             }, {
+               headers: {
+                 'Authorization': `Bearer ${this.providers.aiml.apiKey}`,
+                 'Content-Type': 'application/json'
+               },
+               timeout: 60000 // 60 second timeout
+             })
+           );
+         }
+         
+         const responses = await Promise.all(imagePromises);
+         
+         // Process all generated images
+         const images = responses.map((response, index) => {
+           const responseData = response.data;
+           return {
+             url: responseData.data?.[0]?.url || responseData.url,
+            //  provider: 'aiml',
+            //  model: 'openai/gpt-image-1',
+            //  prompt: imagePrompt,
+             index: index + 1
+           };
+         }).filter(image => image.url); // Filter out any failed generations
+         
+         // Log generated image URLs
+         console.log(`[IMAGE GENERATION] Generated ${images.length} image(s) with AI ML:`);
+         images.forEach((image, index) => {
+           console.log(`[IMAGE ${index + 1}] URL: ${image.url}`);
+           console.log(`[IMAGE ${index + 1}] Model: ${image.model}`);
+           console.log(`[IMAGE ${index + 1}] Prompt: ${image.prompt}`);
+         });
+         
+         // Return single image if count is 1, otherwise return array
+         return count === 1 ? images[0] : images;
+       } catch (error) {
+         console.error('Error generating image with AI ML:', error);
+         if (error.response) {
+           console.error('AI ML API Error:', error.response.data);
+         }
+         throw error;
+       }
+     } else {
+       throw new Error(`Provider ${provider} not supported for image generation`);
+     }
+   }
 
   // Batch generate multiple content types
   async generateCampaignContent(campaignData, options = {}) {
@@ -565,18 +653,40 @@ class AIService {
       }
     }
 
-    // Generate image using Replicate and the Mistral-refined image prompt
-    let imageUrl = null;
+    // Generate 4 images using the specified provider and the Mistral-refined image prompt
+    let generatedImages = [];
     try {
       const imagePromptContent = results.imagePrompt;
       if (imagePromptContent) {
-        const imageResult = await this.generateImage(imagePromptContent, { provider: 'replicate' });
-        imageUrl = imageResult.url;
-        results.imageUrl = imageUrl;
+        const imageResults = await this.generateImage(imagePromptContent, { 
+          provider: options.imageProvider || 'aiml',
+          count: 4,
+          size: '1024x1024'
+        });
+        
+        // Handle both single image and array responses
+        if (Array.isArray(imageResults)) {
+          generatedImages = imageResults;
+          results.imageUrl = imageResults[0]?.url || null; // Keep first image as primary
+        } else {
+          generatedImages = [imageResults];
+          results.imageUrl = imageResults.url;
+        }
+        
+        results.generatedImages = generatedImages;
+        
+        // Log campaign image generation results
+        console.log(`[CAMPAIGN IMAGES] Generated ${generatedImages.length} image(s) for campaign:`);
+        generatedImages.forEach((image, index) => {
+          console.log(`[CAMPAIGN IMAGE ${index + 1}] URL: ${image.url}`);
+          console.log(`[CAMPAIGN IMAGE ${index + 1}] Provider: ${image.provider}`);
+          console.log(`[CAMPAIGN IMAGE ${index + 1}] Model: ${image.model}`);
+        });
       }
     } catch (imgErr) {
-      console.error('Error generating campaign image with Replicate:', imgErr);
+      console.error('Error generating campaign images with Replicate:', imgErr);
       results.imageUrl = null;
+      results.generatedImages = [];
     }
 
     return results;

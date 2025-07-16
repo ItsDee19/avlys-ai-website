@@ -4,6 +4,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './CampaignBuilder.css';
 import { addUserCampaign } from '../utils/firestoreUtils';
 
+// Import SVG icons
+import UsersIcon from '../assets/users-alt.svg';
+import MegaphoneIcon from '../assets/megaphone.svg';
+import GiftIcon from '../assets/badge-percent.svg';
+import HeartIcon from '../assets/heart.svg';
+import ZapIcon from '../assets/bolt.svg';
+import SmileIcon from '../assets/face-awesome.svg';
+import BookIcon from '../assets/terms-info.svg';
+import SparklesIcon from '../assets/star-christmas.svg';
+import LeafIcon from '../assets/bio.svg';
+import HomeIcon from '../assets/house-chimney.svg';
+import TargetIcon from '../assets/badge-percent.svg';
+import SackDollarIcon from '../assets/piggy-bank.svg';
+import BullseyeIcon from '../assets/badge-percent.svg';
+import PiggyBankIcon from '../assets/piggy-bank.svg';
+import ShieldIcon from '../assets/terms-info.svg';
+import ClockIcon from '../assets/time-fast.svg';
+import HelpIcon from '../assets/user-headset.svg';
+import CameraIcon from '../assets/camera.svg';
+import ClapperIcon from '../assets/clapper-open.svg';
+import DiceIcon from '../assets/dice-alt.svg';
+import GameIcon from '../assets/game.svg';
+
 const CampaignBuilder = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
@@ -355,10 +378,10 @@ const CampaignBuilder = () => {
               <h3>What do you want this campaign to do?</h3>
               <div className="goals-grid">
                 {[
-                  { value: 'get-customers', label: 'Get more customers', icon: '👥' },
-                  { value: 'announce-product', label: 'Announce a product/service', icon: '📢' },
-                  { value: 'promote-offer', label: 'Promote an offer or discount', icon: '🎁' },
-                  { value: 'brand-love', label: 'Just build brand love', icon: '❤️' }
+                  { value: 'get-customers', label: 'Get more customers', icon: UsersIcon },
+                  { value: 'announce-product', label: 'Announce a product/service', icon: MegaphoneIcon },
+                  { value: 'promote-offer', label: 'Promote an offer or discount', icon: GiftIcon },
+                  { value: 'brand-love', label: 'Just build brand love', icon: HeartIcon }
                 ].map((goal, index) => (
                   <motion.button
                     key={goal.value}
@@ -368,7 +391,9 @@ const CampaignBuilder = () => {
                     className={`goal-option ${campaignData.campaignGoal === goal.value ? 'selected' : ''}`}
                     onClick={() => handleInputChange('campaignGoal', goal.value)}
                   >
-                    <span className="goal-icon">{goal.icon}</span>
+                    <span className="goal-icon">
+                      <img src={goal.icon} alt="" style={{ width: '24px', height: '24px' }} />
+                    </span>
                     <span className="goal-label">{goal.label}</span>
                   </motion.button>
                 ))}
@@ -379,10 +404,10 @@ const CampaignBuilder = () => {
               <h3>What should your vibe be?</h3>
               <div className="vibe-grid">
                 {[
-                  { value: 'bold-energetic', label: 'Bold & Energetic', icon: '⚡' },
-                  { value: 'friendly-relatable', label: 'Friendly & Relatable', icon: '😊' },
-                  { value: 'informative-trustworthy', label: 'Informative & Trustworthy', icon: '📚' },
-                  { value: 'sleek-premium', label: 'Sleek & Premium', icon: '✨' }
+                  { value: 'bold-energetic', label: 'Bold & Energetic', icon: ZapIcon },
+                  { value: 'friendly-relatable', label: 'Friendly & Relatable', icon: SmileIcon },
+                  { value: 'informative-trustworthy', label: 'Informative & Trustworthy', icon: BookIcon },
+                  { value: 'sleek-premium', label: 'Sleek & Premium', icon: SparklesIcon }
                 ].map((vibe, index) => (
                   <motion.button
                     key={vibe.value}
@@ -392,7 +417,9 @@ const CampaignBuilder = () => {
                     className={`vibe-option ${campaignData.brandVibe === vibe.value ? 'selected' : ''}`}
                     onClick={() => handleInputChange('brandVibe', vibe.value)}
                   >
-                    <span className="vibe-icon">{vibe.icon}</span>
+                    <span className="vibe-icon">
+                      <img src={vibe.icon} alt="" style={{ width: '24px', height: '24px' }} />
+                    </span>
                     <span className="vibe-label">{vibe.label}</span>
                   </motion.button>
                 ))}
@@ -429,7 +456,9 @@ const CampaignBuilder = () => {
                   className={`budget-option ${campaignData.budget === 'organic' ? 'selected' : ''}`}
                   onClick={() => handleInputChange('budget', 'organic')}
                 >
-                  <span className="budget-icon">🌱</span>
+                  <span className="budget-icon">
+                    <img src={PiggyBankIcon} alt="" style={{ width: '24px', height: '24px' }} />
+                  </span>
                   <div className="budget-info">
                     <span className="budget-label">I prefer organic marketing</span>
                     <span className="budget-desc">No paid advertising budget</span>
@@ -509,12 +538,12 @@ const CampaignBuilder = () => {
               <h3>What's your superpower? (Pick up to 3)</h3>
               <div className="superpowers-grid">
                 {[
-                  { value: 'affordable', label: 'Super affordable', icon: '💰' },
-                  { value: 'local-needs', label: 'Made for local needs', icon: '🏠' },
-                  { value: 'personalized', label: 'Personalised experience', icon: '🎯' },
-                  { value: 'eco-friendly', label: 'Eco-friendly or sustainable', icon: '🌱' },
-                  { value: 'quick-service', label: 'Super quick service', icon: '⚡' },
-                  { value: 'great-support', label: 'Support that actually helps', icon: '🤝' }
+                  { value: 'affordable', label: 'Super affordable', icon: SackDollarIcon },
+                  { value: 'local-needs', label: 'Made for local needs', icon: HomeIcon },
+                  { value: 'personalized', label: 'Personalised experience', icon: BullseyeIcon },
+                  { value: 'eco-friendly', label: 'Eco-friendly or sustainable', icon: PiggyBankIcon },
+                  { value: 'quick-service', label: 'Super quick service', icon: ClockIcon },
+                  { value: 'great-support', label: 'Support that actually helps', icon: HelpIcon }
                 ].map((power, index) => (
                   <motion.button
                     key={power.value}
@@ -532,7 +561,9 @@ const CampaignBuilder = () => {
                     }}
                     disabled={!campaignData.superpowers.includes(power.value) && campaignData.superpowers.length >= 3}
                   >
-                    <span className="superpower-icon">{power.icon}</span>
+                    <span className="superpower-icon">
+                      <img src={power.icon} alt="" style={{ width: '24px', height: '24px' }} />
+                    </span>
                     <span className="superpower-label">{power.label}</span>
                   </motion.button>
                 ))}
@@ -554,10 +585,10 @@ const CampaignBuilder = () => {
               <h3>What kind of ad would you like to see?</h3>
               <div className="ad-type-grid">
                 {[
-                  { value: 'static', label: 'Static post', icon: '📷' },
-                  { value: 'reels', label: 'Reels / short videos', icon: '🎬' },
-                  { value: 'carousel', label: 'Carousels', icon: '🔄' },
-                  { value: 'surprise', label: 'Surprise me!', icon: '🎲' }
+                  { value: 'static', label: 'Static post', icon: CameraIcon },
+                  { value: 'reels', label: 'Reels / short videos', icon: ClapperIcon },
+                  { value: 'carousel', label: 'Carousels', icon: GameIcon },
+                  { value: 'surprise', label: 'Surprise me!', icon: DiceIcon }
                 ].map((type, index) => (
                   <motion.button
                     key={type.value}
@@ -567,7 +598,9 @@ const CampaignBuilder = () => {
                     className={`ad-type-option ${campaignData.adType === type.value ? 'selected' : ''}`}
                     onClick={() => handleInputChange('adType', type.value)}
                   >
-                    <span className="ad-type-icon">{type.icon}</span>
+                    <span className="ad-type-icon">
+                      <img src={type.icon} alt="" style={{ width: '24px', height: '24px' }} />
+                    </span>
                     <span className="ad-type-label">{type.label}</span>
                   </motion.button>
                 ))}

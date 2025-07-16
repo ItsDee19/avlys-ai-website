@@ -16,6 +16,7 @@
     "@google/generative-ai": "^0.21.0",
     "@langchain/community": "^0.3.47",
     "@langchain/deepseek": "^0.0.2",
+    "@mistralai/mistralai": "^1.7.4",
     "axios": "^1.6.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -25,7 +26,8 @@
     "firebase-admin": "^13.4.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "openai": "^4.68.0"
+    "openai": "^4.68.0",
+    "replicate": "^1.0.1"
   },
   "devDependencies": {
     "eslint": "^9.28.0",
