@@ -605,6 +605,75 @@ class AIService {
      }
    }
 
+  // Generate videos using ByteDance API
+  async generateVideo(videoPrompt, options = {}) {
+    const { duration = 5, image_url = null } = options;
+    
+    const videoGeneratorKey = process.env.VIDEO_GENERATOR_KEY;
+    if (!videoGeneratorKey) {
+      throw new Error('VIDEO_GENERATOR_KEY environment variable is not set');
+    }
+
+    try {
+      console.log('[VIDEO GENERATION] Starting video generation with prompt:', videoPrompt);
+      
+      const payload = {
+        model: "bytedance/seedance-1-0-lite-i2v",
+        prompt: videoPrompt,
+        duration: duration
+      };
+
+      // Add image_url if provided
+      if (image_url) {
+        payload.image_url = image_url;
+      }
+
+      const response = await axios.post(
+        "https://api.aimlapi.com/v2/generate/video/bytedance/generation",
+        payload,
+        {
+          headers: {
+            "Authorization": `Bearer ${videoGeneratorKey}`,
+            "Content-Type": "application/json"
+          },
+          timeout: 120000 // 2 minute timeout for video generation
+        }
+      );
+
+      const responseData = response.data;
+      console.log('[VIDEO GENERATION] API Response:', responseData);
+
+      // Extract video URL from response
+      const videoUrl = responseData.data?.[0]?.url || responseData.url || responseData.video_url;
+      
+      if (!videoUrl) {
+        throw new Error('No video URL found in API response');
+      }
+
+      const videoResult = {
+        url: videoUrl,
+        provider: 'bytedance',
+        model: 'bytedance/seedance-1-0-lite-i2v',
+        prompt: videoPrompt,
+        duration: duration,
+        generatedAt: new Date()
+      };
+
+      console.log('[VIDEO GENERATION] Generated video successfully:', videoResult);
+      return videoResult;
+
+    } catch (error) {
+      console.error('[VIDEO GENERATION] Error generating video:', error);
+      if (error.response) {
+        console.error('[VIDEO GENERATION] API Error Details:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
+      throw error;
+    }
+  }
+
   // Batch generate multiple content types
   async generateCampaignContent(campaignData, options = {}) {
     const { useParallel = true, maxResults = 3 } = options;
@@ -624,7 +693,15 @@ class AIService {
       },
       {
         type: 'imagePrompt',
-        prompt: `${campaignData.businessIntro} - ${campaignData.brandVibe} style`
+        prompt: `Generate a highly engaging, visually striking image that captures the essence of **${campaignData.businessIntro}**. The image should reflect the **${campaignData.brandVibe}** style—bringing out the emotions, tone, and energy that align with the brand’s identity. The visual should be designed for promotional use on digital platforms, focusing on creating a memorable brand impression.
+
+          **Key Visual Elements to Include:**
+
+          - **Brand Colors:** Use a color palette that complements or matches the brand’s identity.
+          - **Mood & Atmosphere:** Create a setting that reflects the vibe—whether it’s vibrant and energetic, calm and elegant, luxurious and premium, or youthful and fun (as per ${campaignData.brandVibe}).
+          - **Context:** The image should feature elements that naturally relate to **${campaignData.businessIntro}**, such as relevant products, services, or experiences.
+          - **Composition:** Keep it modern, minimalistic, or playful based on the brand vibe, with proper focus on the main product or theme.
+          `
       }
       // { type: 'campaignStrategy', prompt: `Business: ${campaignData.businessIntro}, Goal: ${campaignData.campaignGoal}, Target: ${campaignData.targetCustomer}, Budget: ${campaignData.budget}` }
     ];
@@ -660,7 +737,7 @@ class AIService {
       if (imagePromptContent) {
         const imageResults = await this.generateImage(imagePromptContent, { 
           provider: options.imageProvider || 'aiml',
-          count: 4,
+          count: 3,
           size: '1024x1024'
         });
         

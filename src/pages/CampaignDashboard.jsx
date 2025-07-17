@@ -9,6 +9,7 @@ import { subscribeToCampaigns, subscribeToUserCampaigns } from '../utils/firesto
 import AuthUtils from '../utils/authUtils';
 import { collection, query, where, orderBy, onSnapshot, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getAuth } from 'firebase/auth';
 import Header from '../components/Header.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import SignIn from './SignIn';
@@ -21,6 +22,8 @@ import ImageGallery from '../components/ImageGallery';
 import pauseIcon from '../assets/pause.svg';
 import playIcon from '../assets/play.svg';
 import trashIcon from '../assets/trash.svg';
+import cameraMovieIcon from '../assets/camera-movie.svg';
+import VideoPlayer from '../components/VideoPlayer';
 
 // Memoized metric card component for better performance
 const MetricCard = memo(({
@@ -165,6 +168,7 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
   const profileButtonRef = React.useRef(null);
   const [signInPrompted, setSignInPrompted] = useState(false);
   const { showToast } = useToast();
+  const [videoGenerating, setVideoGenerating] = useState({});
 
   // All useEffects also at top level
   useEffect(() => {
@@ -261,7 +265,16 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
     setError(null);
     let unsubscribe;
     if (user && user.id) {
+      console.log('Subscribing to campaigns for user:', user.id);
       unsubscribe = subscribeToUserCampaigns(user.id, (data) => {
+        console.log('Campaigns loaded:', data.length, 'campaigns');
+        data.forEach(campaign => {
+          console.log('Campaign:', {
+            id: campaign.id,
+            title: campaign.title,
+            userId: campaign.userId
+          });
+        });
         setCampaigns(data);
         setLoading(false);
       });
@@ -496,6 +509,68 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
     } catch (error) {
       console.error('Error deleting campaign:', error);
       if (typeof showToast === 'function') showToast('Failed to delete campaign.', 'error');
+    }
+  };
+
+  const handleGenerateVideo = async (campaign) => {
+    if (!campaign.id) {
+      showToast('Campaign ID not found', 'error');
+      return;
+    }
+
+    console.log('Generating video for campaign:', {
+      id: campaign.id,
+      title: campaign.title,
+      userId: campaign.userId
+    });
+
+    setVideoGenerating(prev => ({ ...prev, [campaign.id]: true }));
+    
+    try {
+      // Get Firebase ID token for authentication
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('Current user:', {
+        uid: currentUser.uid,
+        email: currentUser.email
+      });
+      
+      const idToken = await currentUser.getIdToken();
+      const url = `/api/campaigns/${campaign.id}/generate-video`;
+      console.log('Making request to:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-firebase-user-id': idToken
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate video');
+      }
+
+      const result = await response.json();
+      
+      // Update the campaign in local state with the new video
+      setCampaigns(prev => prev.map(c => 
+        c.id === campaign.id 
+          ? { ...c, generatedVideo: result.video }
+          : c
+      ));
+
+      showToast('Video generated successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating video:', error);
+      showToast(error.message || 'Failed to generate video', 'error');
+    } finally {
+      setVideoGenerating(prev => ({ ...prev, [campaign.id]: false }));
     }
   };
 
@@ -1393,6 +1468,47 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                               <Copy size={20} strokeWidth={2.2} />
                             </button>
                             <button
+                              className="card-action-btn video"
+                              title={campaign.generatedVideo ? "View generated video" : "Generate video"}
+                              aria-label={campaign.generatedVideo ? "View generated video" : "Generate video"}
+                              onClick={() => campaign.generatedVideo ? null : handleGenerateVideo(campaign)}
+                              disabled={videoGenerating[campaign.id]}
+                              tabIndex={0}
+                              style={{
+                                background: campaign.generatedVideo ? '#10b9811a' : '#f59e0b1a',
+                                color: campaign.generatedVideo ? '#10b981' : '#f59e0b',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: 38,
+                                height: 38,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 1px 4px #f59e0b22',
+                                transition: 'background 0.18s, color 0.18s',
+                                cursor: videoGenerating[campaign.id] ? 'not-allowed' : 'pointer',
+                                fontSize: 0,
+                                outline: 'none',
+                                opacity: videoGenerating[campaign.id] ? 0.6 : 1,
+                              }}
+                              onMouseOver={e => {
+                                if (!videoGenerating[campaign.id]) {
+                                  e.currentTarget.style.background = campaign.generatedVideo ? '#10b98133' : '#f59e0b33';
+                                }
+                              }}
+                              onMouseOut={e => {
+                                e.currentTarget.style.background = campaign.generatedVideo ? '#10b9811a' : '#f59e0b1a';
+                              }}
+                            >
+                              {videoGenerating[campaign.id] ? (
+                                <div className="spinner" style={{ width: 16, height: 16, border: '2px solid #f59e0b', borderTop: '2px solid transparent' }}></div>
+                              ) : campaign.generatedVideo ? (
+                                <span style={{ fontSize: 18 }}>▶️</span>
+                              ) : (
+                                <img src={cameraMovieIcon} alt="Generate Video" width={18} height={18} />
+                              )}
+                            </button>
+                            <button
                               className="card-action-btn delete"
                               title="Delete campaign"
                               aria-label="Delete campaign"
@@ -1446,6 +1562,47 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                               <ImageGallery 
                                 images={campaign.generatedImages || []} 
                                 title=""
+                              />
+                            </div>
+                            {/* AI Generated Video */}
+                            <div style={{ marginBottom: 16 }}>
+                              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <h4 style={{ margin: 0, color: '#f59e0b', fontWeight: 600 }}>AI Generated Video</h4>
+                                {!campaign.generatedVideo && (
+                                  <button
+                                    onClick={() => handleGenerateVideo(campaign)}
+                                    disabled={videoGenerating[campaign.id]}
+                                    style={{
+                                      background: '#f59e0b',
+                                      color: '#fff',
+                                      border: 'none',
+                                      borderRadius: 8,
+                                      padding: '0.5rem 1rem',
+                                      fontWeight: 600,
+                                      fontSize: '0.9rem',
+                                      cursor: videoGenerating[campaign.id] ? 'not-allowed' : 'pointer',
+                                      opacity: videoGenerating[campaign.id] ? 0.6 : 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                    }}
+                                  >
+                                    {videoGenerating[campaign.id] ? (
+                                      <>
+                                        <div className="spinner" style={{ width: 12, height: 12, border: '2px solid #fff', borderTop: '2px solid transparent' }}></div>
+                                        Generating...
+                                      </>
+                                    ) : (
+                                      <>
+                                        Generate Video
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                              <VideoPlayer 
+                                video={campaign.generatedVideo}
+                                poster={campaign.generatedImages?.[0]?.url}
                               />
                             </div>
                             {/* Captions, Ad Copy, Hashtags */}
