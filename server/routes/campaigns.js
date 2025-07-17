@@ -318,17 +318,20 @@ router.post('/:id/generate-video', authenticateUser, async (req, res) => {
     if (campaign.location) {
       videoPrompt += `Location: ${campaign.location}. `;
     }
-    videoPrompt += `Make it visually appealing and engaging for social media platforms.`;
+    videoPrompt += `Ensure the visuals are dynamic, platform-optimized, and designed to capture attention across social media feeds.`;
 
-    // Generate video using AI service
+    // Generate video using AI service (request portrait mode)
     let videoResult = null;
     try {
       console.log('Generating video with prompt:', videoPrompt);
       videoResult = await aiService.generateVideo(videoPrompt, {
         duration: 5,
-        image_url: campaign.generatedImages?.[0]?.url || null // Use first generated image if available
+        image_url: campaign.generatedImages?.[0]?.url || null,
+        width: 720, // Portrait mode
+        height: 1280, // Portrait mode
       });
       console.log('Video generated successfully:', videoResult);
+      console.log('[VIDEO GENERATION] FAL raw result:', JSON.stringify(videoResult, null, 2));
     } catch (videoError) {
       console.error('Error generating video:', videoError);
       return res.status(500).json({ 
@@ -337,19 +340,20 @@ router.post('/:id/generate-video', authenticateUser, async (req, res) => {
       });
     }
 
-    // Update campaign with video data
-    const updatedCampaign = await firestoreService.updateCampaign(req.params.id, {
-      generatedVideo: videoResult,
-      updatedAt: new Date()
-    });
-    
-    res.json({ 
-      message: 'Video generated successfully',
-      video: videoResult,
-      campaign: updatedCampaign
-    });
+    // --- FIX: Use the FirestoreService instance, not destructured method ---
+    try {
+      // Use the instance method so 'this' is correct
+      await firestoreService.updateUserCampaign(campaign.userId, campaign.id, { generatedVideo: videoResult, updatedAt: new Date() });
+      console.log('Saved generated video to user campaign subcollection.');
+    } catch (firestoreError) {
+      console.error('Failed to save generated video to Firestore:', firestoreError);
+      // Still return the video, but warn in logs
+    }
+    // --- END FIX ---
+
+    res.json({ video: videoResult });
   } catch (error) {
-    console.error('Error generating video for campaign:', error);
+    console.error('Error in /:id/generate-video:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -174,27 +174,10 @@ const ImageGallery = ({ images = [], title = "AI Generated Images" }) => {
               style={{
                 width: '100%',
                 height: 'auto',
-                maxHeight: '70vh',
+                maxHeight: '90vh',
                 objectFit: 'contain'
               }}
             />
-            <div style={{ padding: '20px', background: '#f9fafb' }}>
-              <h4 style={{ margin: '0 0 16px 0', color: '#1f2937' }}>Image Details</h4>
-              <p style={{ margin: '8px 0', color: '#374151' }}>
-                <strong>Prompt:</strong> {selectedImage.prompt}
-              </p>
-              <p style={{ margin: '8px 0', color: '#374151' }}>
-                <strong>Provider:</strong> {selectedImage.provider}
-              </p>
-              <p style={{ margin: '8px 0', color: '#374151' }}>
-                <strong>Model:</strong> {selectedImage.model}
-              </p>
-              {selectedImage.index && (
-                <p style={{ margin: '8px 0', color: '#374151' }}>
-                  <strong>Image:</strong> {selectedImage.index} of {images.length}
-                </p>
-              )}
-            </div>
           </div>
         </div>
       )}

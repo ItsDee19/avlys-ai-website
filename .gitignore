@@ -3959,3 +3959,6 @@ node_modules
 dist
 dist-ssr
 *.
+
+test.py
+test-video-generation.py

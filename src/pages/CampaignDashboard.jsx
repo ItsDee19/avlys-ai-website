@@ -557,13 +557,17 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
       }
 
       const result = await response.json();
-      
-      // Update the campaign in local state with the new video
-      setCampaigns(prev => prev.map(c => 
-        c.id === campaign.id 
-          ? { ...c, generatedVideo: result.video }
-          : c
-      ));
+      console.log('API result:', result); // Add this for debugging
+
+      setCampaigns(prev => {
+        const updated = prev.map(c => 
+          c.id === campaign.id 
+            ? { ...c, generatedVideo: result.video }
+            : c
+        );
+        console.log('Updated campaigns:', updated); // Add this for debugging
+        return updated;
+      });
 
       showToast('Video generated successfully!', 'success');
     } catch (error) {
@@ -1600,10 +1604,16 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                                   </button>
                                 )}
                               </div>
-                              <VideoPlayer 
-                                video={campaign.generatedVideo}
-                                poster={campaign.generatedImages?.[0]?.url}
-                              />
+                              {campaign.generatedVideo && campaign.generatedVideo.url ? (
+                                <VideoPlayer 
+                                  video={campaign.generatedVideo}
+                                  poster={campaign.generatedImages?.[0]?.url}
+                                />
+                              ) : (
+                                <div style={{ color: '#64748b', fontStyle: 'italic', marginTop: 8 }}>
+                                  No video generated yet.
+                                </div>
+                              )}
                             </div>
                             {/* Captions, Ad Copy, Hashtags */}
                           {campaign.aiContent.captions && (

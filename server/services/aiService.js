@@ -5,6 +5,7 @@ const axios = require('axios');
 const { ChatOpenAI } = require('@langchain/openai');
 const Replicate = require('replicate');
 const { Mistral } = require('@mistralai/mistralai');
+const { fal } = require("@fal-ai/client");
 
 // OpenRouter direct API call helper (must be outside the class)
 const generateWithOpenRouterAPI = async (messages, model) => {
@@ -605,71 +606,56 @@ class AIService {
      }
    }
 
-  // Generate videos using ByteDance API
+  // Generate videos using FAL (ByteDance Seedance via FAL)
   async generateVideo(videoPrompt, options = {}) {
-    const { duration = 5, image_url = null } = options;
-    
-    const videoGeneratorKey = process.env.VIDEO_GENERATOR_KEY;
-    if (!videoGeneratorKey) {
-      throw new Error('VIDEO_GENERATOR_KEY environment variable is not set');
-    }
+    const { duration = 5, image_url = null, width = null, height = null } = options;
 
     try {
-      console.log('[VIDEO GENERATION] Starting video generation with prompt:', videoPrompt);
-      
-      const payload = {
-        model: "bytedance/seedance-1-0-lite-i2v",
+      console.log('[VIDEO GENERATION] Starting video generation with FAL:', videoPrompt);
+
+      // Prepare input for FAL
+      const input = {
         prompt: videoPrompt,
-        duration: duration
       };
+      if (image_url) input.image_url = image_url;
+      if (width) input.width = width;
+      if (height) input.height = height;
 
-      // Add image_url if provided
-      if (image_url) {
-        payload.image_url = image_url;
-      }
+      // Call FAL subscribe
+      const result = await fal.subscribe("fal-ai/bytedance/seedance/v1/lite/image-to-video", {
+        input,
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS") {
+            update.logs.map((log) => log.message).forEach(console.log);
+          }
+        },
+      });
 
-      const response = await axios.post(
-        "https://api.aimlapi.com/v2/generate/video/bytedance/generation",
-        payload,
-        {
-          headers: {
-            "Authorization": `Bearer ${videoGeneratorKey}`,
-            "Content-Type": "application/json"
-          },
-          timeout: 120000 // 2 minute timeout for video generation
-        }
-      );
+      // ADD THIS LINE:
+      console.log('[VIDEO GENERATION] FAL raw result:', JSON.stringify(result, null, 2));
 
-      const responseData = response.data;
-      console.log('[VIDEO GENERATION] API Response:', responseData);
-
-      // Extract video URL from response
-      const videoUrl = responseData.data?.[0]?.url || responseData.url || responseData.video_url;
-      
+      // result.data contains the video result, result.requestId is the job id
+      const videoUrl = result.data?.video?.url;
       if (!videoUrl) {
-        throw new Error('No video URL found in API response');
+        throw new Error('No video URL found in FAL response');
       }
 
       const videoResult = {
         url: videoUrl,
-        provider: 'bytedance',
-        model: 'bytedance/seedance-1-0-lite-i2v',
+        provider: 'fal-ai',
+        model: 'bytedance/seedance/v1/lite/image-to-video',
         prompt: videoPrompt,
         duration: duration,
-        generatedAt: new Date()
+        generatedAt: new Date(),
+        requestId: result.requestId,
       };
 
       console.log('[VIDEO GENERATION] Generated video successfully:', videoResult);
       return videoResult;
 
     } catch (error) {
-      console.error('[VIDEO GENERATION] Error generating video:', error);
-      if (error.response) {
-        console.error('[VIDEO GENERATION] API Error Details:', {
-          status: error.response.status,
-          data: error.response.data
-        });
-      }
+      console.error('[VIDEO GENERATION] Error generating video with FAL:', error);
       throw error;
     }
   }

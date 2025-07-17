@@ -573,6 +573,27 @@ class FirestoreService {
     await db.collection('deployments').doc(deploymentId).delete();
     return { id: deploymentId, deleted: true };
   }
+
+  /**
+   * Update a campaign in the user's subcollection (users/{uid}/campaigns/{campaignId})
+   * @param {string} userId - User ID
+   * @param {string} campaignId - Campaign ID
+   * @param {object} updateData - Data to update
+   */
+  async updateUserCampaign(userId, campaignId, updateData) {
+    try {
+      this.checkAvailability();
+      const campaignRef = db.collection('users').doc(userId).collection('campaigns').doc(campaignId);
+      await campaignRef.set({
+        ...updateData,
+        updatedAt: new Date()
+      }, { merge: true });
+      return (await campaignRef.get()).data();
+    } catch (error) {
+      console.error('Error updating user campaign:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new FirestoreService();
