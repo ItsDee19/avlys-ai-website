@@ -274,6 +274,90 @@ router.post('/:id/regenerate-content', authenticateUser, async (req, res) => {
   }
 });
 
+// Generate video for a specific campaign
+router.post('/:id/generate-video', authenticateUser, async (req, res) => {
+  try {
+    console.log('Video generation request:', {
+      campaignId: req.params.id,
+      userId: req.user.id,
+      userEmail: req.user.email,
+      authType: req.user.authType
+    });
+    
+    const campaign = await firestoreService.getCampaignById(req.params.id);
+    
+    console.log('Campaign lookup result:', {
+      found: !!campaign,
+      campaignId: campaign?.id,
+      campaignUserId: campaign?.userId,
+      campaignTitle: campaign?.title
+    });
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user owns this campaign
+    if (campaign.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    console.log('Generating video for campaign:', campaign.id);
+    
+    // Create video prompt from campaign details
+    let videoPrompt = `Create an engaging marketing video for ${campaign.businessIntro || campaign.title}. `;
+    if (campaign.campaignGoal) {
+      videoPrompt += `The goal is to ${campaign.campaignGoal}. `;
+    }
+    if (campaign.brandVibe) {
+      videoPrompt += `Use a ${campaign.brandVibe} style and tone. `;
+    }
+    if (campaign.targetCustomer) {
+      videoPrompt += `Target audience: ${campaign.targetCustomer}. `;
+    }
+    if (campaign.location) {
+      videoPrompt += `Location: ${campaign.location}. `;
+    }
+    videoPrompt += `Ensure the visuals are dynamic, platform-optimized, and designed to capture attention across social media feeds.`;
+
+    // Generate video using AI service (request portrait mode)
+    let videoResult = null;
+    try {
+      console.log('Generating video with prompt:', videoPrompt);
+      videoResult = await aiService.generateVideo(videoPrompt, {
+        duration: 5,
+        image_url: campaign.generatedImages?.[0]?.url || null,
+        width: 720, // Portrait mode
+        height: 1280, // Portrait mode
+      });
+      console.log('Video generated successfully:', videoResult);
+      console.log('[VIDEO GENERATION] FAL raw result:', JSON.stringify(videoResult, null, 2));
+    } catch (videoError) {
+      console.error('Error generating video:', videoError);
+      return res.status(500).json({ 
+        error: 'Failed to generate video',
+        details: videoError.message 
+      });
+    }
+
+    // --- FIX: Use the FirestoreService instance, not destructured method ---
+    try {
+      // Use the instance method so 'this' is correct
+      await firestoreService.updateUserCampaign(campaign.userId, campaign.id, { generatedVideo: videoResult, updatedAt: new Date() });
+      console.log('Saved generated video to user campaign subcollection.');
+    } catch (firestoreError) {
+      console.error('Failed to save generated video to Firestore:', firestoreError);
+      // Still return the video, but warn in logs
+    }
+    // --- END FIX ---
+
+    res.json({ video: videoResult });
+  } catch (error) {
+    console.error('Error in /:id/generate-video:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update AI content for a campaign (caption or image)
 router.patch('/:id/ai-content', authenticateUser, async (req, res) => {
   try {

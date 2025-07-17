@@ -291,6 +291,41 @@ router.post('/images/multiple', authenticateUser, async (req, res) => {
   }
 });
 
+// Generate videos using ByteDance API
+router.post('/videos', authenticateUser, async (req, res) => {
+  try {
+    const { prompt, options = {} } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    console.log('Generating video with prompt:', prompt);
+    console.log('Options:', options);
+
+    const result = await aiService.generateVideo(prompt, options);
+    
+    console.log('Video generation result:', result);
+    
+    res.json({
+      status: 'success',
+      type: 'video',
+      result: result
+    });
+  } catch (error) {
+    console.error('Video generation error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    res.status(500).json({ 
+      error: error.message,
+      details: error.response?.data || 'No additional details available'
+    });
+  }
+});
+
 // Generate campaign strategy
 router.post('/campaign-strategy', authenticateUser, async (req, res) => {
   try {

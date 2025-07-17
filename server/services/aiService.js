@@ -5,6 +5,7 @@ const axios = require('axios');
 const { ChatOpenAI } = require('@langchain/openai');
 const Replicate = require('replicate');
 const { Mistral } = require('@mistralai/mistralai');
+const { fal } = require("@fal-ai/client");
 
 // OpenRouter direct API call helper (must be outside the class)
 const generateWithOpenRouterAPI = async (messages, model) => {
@@ -605,6 +606,60 @@ class AIService {
      }
    }
 
+  // Generate videos using FAL (ByteDance Seedance via FAL)
+  async generateVideo(videoPrompt, options = {}) {
+    const { duration = 5, image_url = null, width = null, height = null } = options;
+
+    try {
+      console.log('[VIDEO GENERATION] Starting video generation with FAL:', videoPrompt);
+
+      // Prepare input for FAL
+      const input = {
+        prompt: videoPrompt,
+      };
+      if (image_url) input.image_url = image_url;
+      if (width) input.width = width;
+      if (height) input.height = height;
+
+      // Call FAL subscribe
+      const result = await fal.subscribe("fal-ai/bytedance/seedance/v1/lite/image-to-video", {
+        input,
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS") {
+            update.logs.map((log) => log.message).forEach(console.log);
+          }
+        },
+      });
+
+      // ADD THIS LINE:
+      console.log('[VIDEO GENERATION] FAL raw result:', JSON.stringify(result, null, 2));
+
+      // result.data contains the video result, result.requestId is the job id
+      const videoUrl = result.data?.video?.url;
+      if (!videoUrl) {
+        throw new Error('No video URL found in FAL response');
+      }
+
+      const videoResult = {
+        url: videoUrl,
+        provider: 'fal-ai',
+        model: 'bytedance/seedance/v1/lite/image-to-video',
+        prompt: videoPrompt,
+        duration: duration,
+        generatedAt: new Date(),
+        requestId: result.requestId,
+      };
+
+      console.log('[VIDEO GENERATION] Generated video successfully:', videoResult);
+      return videoResult;
+
+    } catch (error) {
+      console.error('[VIDEO GENERATION] Error generating video with FAL:', error);
+      throw error;
+    }
+  }
+
   // Batch generate multiple content types
   async generateCampaignContent(campaignData, options = {}) {
     const { useParallel = true, maxResults = 3 } = options;
@@ -624,7 +679,15 @@ class AIService {
       },
       {
         type: 'imagePrompt',
-        prompt: `${campaignData.businessIntro} - ${campaignData.brandVibe} style`
+        prompt: `Generate a highly engaging, visually striking image that captures the essence of **${campaignData.businessIntro}**. The image should reflect the **${campaignData.brandVibe}** style—bringing out the emotions, tone, and energy that align with the brand’s identity. The visual should be designed for promotional use on digital platforms, focusing on creating a memorable brand impression.
+
+          **Key Visual Elements to Include:**
+
+          - **Brand Colors:** Use a color palette that complements or matches the brand’s identity.
+          - **Mood & Atmosphere:** Create a setting that reflects the vibe—whether it’s vibrant and energetic, calm and elegant, luxurious and premium, or youthful and fun (as per ${campaignData.brandVibe}).
+          - **Context:** The image should feature elements that naturally relate to **${campaignData.businessIntro}**, such as relevant products, services, or experiences.
+          - **Composition:** Keep it modern, minimalistic, or playful based on the brand vibe, with proper focus on the main product or theme.
+          `
       }
       // { type: 'campaignStrategy', prompt: `Business: ${campaignData.businessIntro}, Goal: ${campaignData.campaignGoal}, Target: ${campaignData.targetCustomer}, Budget: ${campaignData.budget}` }
     ];
@@ -660,7 +723,7 @@ class AIService {
       if (imagePromptContent) {
         const imageResults = await this.generateImage(imagePromptContent, { 
           provider: options.imageProvider || 'aiml',
-          count: 4,
+          count: 3,
           size: '1024x1024'
         });
         
