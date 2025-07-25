@@ -3962,3 +3962,8 @@ dist-ssr
 
 test.py
 test-video-generation.py
+temp
+.venv
+__pycache__
+ad_copy_generator.py
+debug-video-storage.js

@@ -7,41 +7,62 @@ const Replicate = require('replicate');
 const { Mistral } = require('@mistralai/mistralai');
 const { fal } = require("@fal-ai/client");
 
-// OpenRouter direct API call helper (must be outside the class)
-const generateWithOpenRouterAPI = async (messages, model) => {
-  const response = await axios.post(
-    'https://openrouter.ai/api/v1/chat/completions',
-    {
-      model,
-      messages,
-      max_tokens: 1024,
-      temperature: 0.8,
-    },
-    {
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-  return response.data.choices[0].message.content;
-};
-
 class AIService {
   constructor() {
     this.providers = {};
+    this.enrichmentData = null; // Holds enrichment data for the current campaign
     this.initializeProviders();
+    
     // Initialize Replicate
     if (process.env.REPLICATE_API_TOKEN) {
       this.providers.replicate = new Replicate({
         auth: process.env.REPLICATE_API_TOKEN
       });
     }
+    
     // Initialize Mistral
     if (process.env.MISTRAL_API_KEY) {
       this.providers.mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
     }
+    
+    // Initialize FAL for video generation
+    if (process.env.FAL_KEY) {
+      fal.config({
+        credentials: process.env.FAL_KEY
+      });
+      console.log('✅ FAL initialized for video generation');
+    } else {
+      console.warn('⚠️  FAL_KEY not found - video generation will not work');
+    }
+  }
 
+  /**
+   * Initializes enrichment data for a given campaign.
+   * Fetches enrichment data from FastAPI and stores it in this.enrichmentData.
+   * @param {Object} campaignData - The campaign data to send for enrichment.
+   * @returns {Promise<void>} - Resolves when enrichment data is fetched and stored.
+   */
+  async initEnrichmentData(campaignData) {
+    try {
+      // Use businessIntro and location from campaignData
+      const businessIntro = campaignData.businessIntro;
+      const location = campaignData.location;
+      if (!businessIntro || !location) {
+        throw new Error('Missing businessIntro or location in campaignData for enrichment');
+      }
+      const payload = {
+        business_name: businessIntro,
+        business_location: location
+      };
+      const response = await axios.post('http://localhost:8000/scrape', payload, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      this.enrichmentData = response.data; // Store enrichment data for use by other methods
+    } catch (error) {
+      console.error('Error fetching enrichment data:', error.message);
+      this.enrichmentData = null;
+      throw error;
+    }
   }
 
   initializeProviders() {
@@ -85,6 +106,25 @@ class AIService {
     console.log(`AI Service initialized with ${Object.keys(this.providers).length} providers`);
   }
 
+  // Private method for enrichment data
+  async #fetchEnrichmentData(campaignData) {
+    try {
+      // Only send business_name and business_location
+      const payload = {
+        business_name: campaignData.business_name,
+        business_location: campaignData.business_location
+      };
+      const response = await axios.post('http://localhost:8000/scrape', payload, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000, // 10 seconds timeout
+      });
+      return response.data; // Assumes FastAPI returns JSON
+    } catch (error) {
+      console.error('Error fetching enrichment data:', error.message);
+      throw error;
+    }
+  }
+
   // Get available providers
   getAvailableProviders() {
     const providers = Object.keys(this.providers);
@@ -92,7 +132,14 @@ class AIService {
     return providers;
   }
 
-
+  // Helper to get only positive reviews
+  getPositiveReviews(reviews) {
+    if (!Array.isArray(reviews)) return [];
+    const negativeWords = ['not', 'disappoint', 'average', 'bad', 'drawback', 'unfortunately', 'no', "won't", "never", 'poor', 'worse', 'worst', 'negative', 'problem', 'issue', 'complain', 'rude', 'slow', 'unhappy', 'unpleasant', 'dirty', 'overpriced', 'expensive', 'wait', 'queue', 'crowd', 'intrusive'];
+    return reviews.filter(review =>
+      !negativeWords.some(word => review.toLowerCase().includes(word))
+    );
+  }
 
   // Generate content using multiple providers in parallel
   async generateContentParallel(type, prompt, options = {}) {
@@ -144,7 +191,18 @@ class AIService {
   // Generate social media captions
   async generateCaption(prompt, provider, options) {
     const { tone = 'friendly', platform = 'instagram', length = 'medium' } = options;
-    
+    const enrichment = this.enrichmentData || {};
+    const positiveReviews = this.getPositiveReviews(enrichment.reviews);
+    const reviewText = positiveReviews.length > 0 ? `Here are some positive customer experiences: ${positiveReviews.join(' ')}` : '';
+    const businessInfo = enrichment.title || enrichment.business_name || '';
+    const address = enrichment.address || '';
+    const signatureDishes = enrichment.preferences?.food?.dish?.join(', ') || '';
+    const culture = enrichment.culture?.Kolkata?.['Park Street']?.description || '';
+    const lifestyle = enrichment.lifestyle?.['Park Street']?.description || '';
+    const website = enrichment.website ? `Website: ${enrichment.website}` : '';
+    const phone = enrichment.phone ? `Phone: ${enrichment.phone}` : '';
+    const extra = [businessInfo, address, signatureDishes, culture, lifestyle, reviewText, website, phone].filter(Boolean).join('\n');
+
     // Platform-specific configurations
     const platformConfigs = {
       instagram: {
@@ -212,7 +270,9 @@ class AIService {
     - Optimize for the platform's specific features
     - Include appropriate call-to-action for the platform
     - Consider the platform's character limits
-    - Use trending hashtags and formats for the platform`;
+    - Use trending hashtags and formats for the platform
+    
+    ${extra}`;
 
     const userPrompt = `Create a ${platform} caption for: ${prompt}`;
 
@@ -242,16 +302,17 @@ class AIService {
   // Generate ad copy
   async generateAdCopy(prompt, provider, options) {
     const { adType = 'social', platform = 'facebook', tone = 'persuasive' } = options;
-    
-    const systemPrompt = `You are a professional copywriter specializing in ${platform} advertising.
-    Create compelling ad copy that drives action and conversions.
-    Ad Type: ${adType}
-    Tone: ${tone}
-    Focus on benefits, urgency, and clear call-to-action.
-    Optimize for Indian market and cultural context.`;
-
+    const enrichment = this.enrichmentData || {};
+    const positiveReviews = this.getPositiveReviews(enrichment.reviews);
+    const reviewText = positiveReviews.length > 0 ? `Here are some positive customer experiences: ${positiveReviews.join(' ')}` : '';
+    const businessInfo = enrichment.title || enrichment.business_name || '';
+    const address = enrichment.address || '';
+    const signatureDishes = enrichment.preferences?.food?.dish?.join(', ') || '';
+    const culture = enrichment.culture?.Kolkata?.['Park Street']?.description || '';
+    const lifestyle = enrichment.lifestyle?.['Park Street']?.description || '';
+    const extra = [businessInfo, address, signatureDishes, culture, lifestyle, reviewText].filter(Boolean).join('\n');
+    const systemPrompt = `You are a professional copywriter specializing in ${platform} advertising.\nCreate compelling ad copy that drives action and conversions.\nAd Type: ${adType}\nTone: ${tone}\nFocus on benefits, urgency, and clear call-to-action.\nOptimize for Indian market and cultural context.\n\n${extra}`;
     const userPrompt = `Create ${adType} ad copy for: ${prompt}`;
-
     try {
       switch (provider) {
         case 'openai':
@@ -278,15 +339,19 @@ class AIService {
   // Generate hashtags
   async generateHashtags(prompt, provider, options) {
     const { count = 15, platform = 'instagram', includeTrending = true } = options;
-    
-    const systemPrompt = `You are a social media hashtag expert.
-    Generate relevant, trending hashtags for ${platform} content.
-    Include a mix of popular, niche, and location-specific hashtags.
-    Focus on Indian market and cultural relevance.
-    Return only hashtags, separated by spaces.`;
-
+    const enrichment = this.enrichmentData || {};
+    const positiveReviews = this.getPositiveReviews(enrichment.reviews);
+    const reviewText = positiveReviews.length > 0 ? `Here are some positive customer experiences: ${positiveReviews.join(' ')}` : '';
+    const businessInfo = enrichment.title || enrichment.business_name || '';
+    const address = enrichment.address || '';
+    const signatureDishes = enrichment.preferences?.food?.dish?.join(', ') || '';
+    const culture = enrichment.culture?.Kolkata?.['Park Street']?.description || '';
+    const lifestyle = enrichment.lifestyle?.['Park Street']?.description || '';
+    const website = enrichment.website ? `Website: ${enrichment.website}` : '';
+    const phone = enrichment.phone ? `Phone: ${enrichment.phone}` : '';
+    const extra = [businessInfo, address, signatureDishes, culture, lifestyle, reviewText, website, phone].filter(Boolean).join('\n');
+    const systemPrompt = `You are a social media hashtag expert.\nGenerate relevant, trending hashtags for ${platform} content.\nInclude a mix of popular, niche, and location-specific hashtags.\nFocus on Indian market and cultural relevance.\nReturn only hashtags, separated by spaces.\n\n${extra}`;
     const userPrompt = `Generate ${count} hashtags for: ${prompt}`;
-
     try {
       switch (provider) {
         case 'openai':
@@ -313,16 +378,17 @@ class AIService {
   // Generate image prompts for DALL-E/Midjourney
   async generateImagePrompt(prompt, provider, options) {
     const { style = 'photorealistic', platform = 'instagram', mood = 'positive' } = options;
-    
-    const systemPrompt = `You are an expert AI image prompt engineer.
-    Create a detailed, effective prompt for DALL-E 3 or Stable Diffusion to generate an image.
-    The prompt should be in English and include details about style, lighting, composition, and mood.
-    Platform: ${platform}
-    Style: ${style}
-    Mood: ${mood}`;
-
+    const enrichment = this.enrichmentData || {};
+    const businessInfo = enrichment.title || enrichment.business_name || '';
+    const address = enrichment.address || '';
+    const signatureDishes = enrichment.preferences?.food?.dish?.join(', ') || '';
+    const culture = enrichment.culture?.Kolkata?.['Park Street']?.description || '';
+    const lifestyle = enrichment.lifestyle?.['Park Street']?.description || '';
+    const thumbnail = enrichment.thumbnail_url || '';
+    const extra = [businessInfo, address, signatureDishes, culture, lifestyle].filter(Boolean).join('\n');
+    const referenceText = thumbnail ? `Use the provided thumbnail as a visual reference for the campaign image. Thumbnail URL: ${thumbnail}` : '';
+    const systemPrompt = `You are an expert AI image prompt engineer.\nCreate a detailed, effective prompt for DALL-E 3 or Stable Diffusion to generate an image.\nThe prompt should be in English and include details about style, lighting, composition, and mood.\nPlatform: ${platform}\nStyle: ${style}\nMood: ${mood}\n${extra}\n${referenceText}`;
     const userPrompt = `Create an image prompt for: ${prompt}`;
-
     try {
       switch (provider) {
         case 'openai':
@@ -349,16 +415,17 @@ class AIService {
   // Generate campaign strategy
   async generateCampaignStrategy(prompt, provider, options) {
     const { budget = 'medium', duration = '1 month', platforms = ['facebook', 'instagram'] } = options;
-    
-    const systemPrompt = `You are a digital marketing strategist specializing in Indian markets.
-    Create comprehensive campaign strategies that drive results.
-    Budget: ${budget}
-    Duration: ${duration}
-    Platforms: ${platforms.join(', ')}
-    Include targeting, messaging, content calendar, and budget allocation.`;
-
+    const enrichment = this.enrichmentData || {};
+    const positiveReviews = this.getPositiveReviews(enrichment.reviews);
+    const reviewText = positiveReviews.length > 0 ? `Here are some positive customer experiences: ${positiveReviews.join(' ')}` : '';
+    const businessInfo = enrichment.title || enrichment.business_name || '';
+    const address = enrichment.address || '';
+    const signatureDishes = enrichment.preferences?.food?.dish?.join(', ') || '';
+    const culture = enrichment.culture?.Kolkata?.['Park Street']?.description || '';
+    const lifestyle = enrichment.lifestyle?.['Park Street']?.description || '';
+    const extra = [businessInfo, address, signatureDishes, culture, lifestyle, reviewText].filter(Boolean).join('\n');
+    const systemPrompt = `You are a digital marketing strategist specializing in Indian markets.\nCreate comprehensive campaign strategies that drive results.\nBudget: ${budget}\nDuration: ${duration}\nPlatforms: ${platforms.join(', ')}\nInclude targeting, messaging, content calendar, and budget allocation.\n\n${extra}`;
     const userPrompt = `Create a campaign strategy for: ${prompt}`;
-
     try {
       switch (provider) {
         case 'openai':
@@ -496,7 +563,8 @@ class AIService {
   // Generate images using DALL-E, Replicate, or AI ML
   async generateImage(imagePrompt, options = {}) {
     const { provider = 'aiml', size = '1024x1024', quality = 'standard', style = 'vivid', model = 'stability-ai/sdxl', count = 1 } = options;
-    
+    const enrichment = this.enrichmentData || {};
+    const referenceImage = enrichment.thumbnail_url || null;
     if (provider === 'replicate') {
       if (!this.providers.replicate) {
         throw new Error('Replicate provider not available for image generation');
@@ -513,18 +581,14 @@ class AIService {
                   prompt: imagePrompt,
                   width: parseInt(size.split('x')[0]),
                   height: parseInt(size.split('x')[1]),
-                  // Add seed for variety
                   seed: Math.floor(Math.random() * 1000000),
-                  // Add more parameters as needed
+                  image: referenceImage // Use thumbnail as reference if available, else null
                 }
               }
             )
           );
         }
-        
         const outputs = await Promise.all(imagePromises);
-        
-        // Process all generated images
         const images = outputs.map((output, index) => ({
           url: Array.isArray(output) ? output[0] : output,
           provider: 'replicate',
@@ -532,94 +596,100 @@ class AIService {
           prompt: imagePrompt,
           index: index + 1
         }));
-        
-        // Log generated image URLs
         console.log(`[IMAGE GENERATION] Generated ${images.length} image(s) with Replicate:`);
         images.forEach((image, index) => {
           console.log(`[IMAGE ${index + 1}] URL: ${image.url}`);
           console.log(`[IMAGE ${index + 1}] Model: ${image.model}`);
           console.log(`[IMAGE ${index + 1}] Prompt: ${image.prompt}`);
         });
-        
-        // Return single image if count is 1, otherwise return array
         return count === 1 ? images[0] : images;
       } catch (error) {
         console.error('Error generating image with Replicate:', error);
-                          throw error;
-       }
-     } else if (provider === 'aiml') {
-       if (!this.providers.aiml) {
-         throw new Error('AI ML provider not available for image generation');
-       }
-       try {
-         // Generate multiple images in parallel for AI ML
-         const imagePromises = [];
-         for (let i = 0; i < count; i++) {
-           imagePromises.push(
-             axios.post(this.providers.aiml.baseURL, {
-               prompt: imagePrompt,
-               model: 'openai/gpt-image-1',
-               size: size
-             }, {
-               headers: {
-                 'Authorization': `Bearer ${this.providers.aiml.apiKey}`,
-                 'Content-Type': 'application/json'
-               },
-               timeout: 60000 // 60 second timeout
-             })
-           );
-         }
-         
-         const responses = await Promise.all(imagePromises);
-         
-         // Process all generated images
-         const images = responses.map((response, index) => {
-           const responseData = response.data;
-           return {
-             url: responseData.data?.[0]?.url || responseData.url,
-            //  provider: 'aiml',
-            //  model: 'openai/gpt-image-1',
-            //  prompt: imagePrompt,
-             index: index + 1
-           };
-         }).filter(image => image.url); // Filter out any failed generations
-         
-         // Log generated image URLs
-         console.log(`[IMAGE GENERATION] Generated ${images.length} image(s) with AI ML:`);
-         images.forEach((image, index) => {
-           console.log(`[IMAGE ${index + 1}] URL: ${image.url}`);
-           console.log(`[IMAGE ${index + 1}] Model: ${image.model}`);
-           console.log(`[IMAGE ${index + 1}] Prompt: ${image.prompt}`);
-         });
-         
-         // Return single image if count is 1, otherwise return array
-         return count === 1 ? images[0] : images;
-       } catch (error) {
-         console.error('Error generating image with AI ML:', error);
-         if (error.response) {
-           console.error('AI ML API Error:', error.response.data);
-         }
-         throw error;
-       }
-     } else {
-       throw new Error(`Provider ${provider} not supported for image generation`);
-     }
-   }
+        throw error;
+      }
+    } else if (provider === 'aiml') {
+      if (!this.providers.aiml) {
+        throw new Error('AI ML provider not available for image generation');
+      }
+      try {
+        const imagePromises = [];
+        for (let i = 0; i < count; i++) {
+          imagePromises.push(
+            axios.post(this.providers.aiml.baseURL, {
+              prompt: imagePrompt,
+              model: 'openai/gpt-image-1',
+              size: size
+            }, {
+              headers: {
+                'Authorization': `Bearer ${this.providers.aiml.apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: 60000 // 60 second timeout
+            })
+          );
+        }
+        const responses = await Promise.all(imagePromises);
+        const images = responses.map((response, index) => {
+          const responseData = response.data;
+          return {
+            url: responseData.data?.[0]?.url || responseData.url,
+            index: index + 1
+          };
+        }).filter(image => image.url);
+        console.log(`[IMAGE GENERATION] Generated ${images.length} image(s) with AI ML:`);
+        images.forEach((image, index) => {
+          console.log(`[IMAGE ${index + 1}] URL: ${image.url}`);
+          console.log(`[IMAGE ${index + 1}] Model: ${image.model}`);
+          console.log(`[IMAGE ${index + 1}] Prompt: ${image.prompt}`);
+        });
+        return count === 1 ? images[0] : images;
+      } catch (error) {
+        console.error('Error generating image with AI ML:', error);
+        if (error.response) {
+          console.error('AI ML API Error:', error.response.data);
+        }
+        throw error;
+      }
+    } else {
+      throw new Error(`Provider ${provider} not supported for image generation`);
+    }
+  }
 
   // Generate videos using FAL (ByteDance Seedance via FAL)
   async generateVideo(videoPrompt, options = {}) {
     const { duration = 5, image_url = null, width = null, height = null } = options;
 
+    // Enrich the video prompt with enrichment data
+    const enrichment = this.enrichmentData || {};
+    const positiveReviews = this.getPositiveReviews(enrichment.reviews);
+    const reviewText = positiveReviews.length > 0 ? `Here are some positive customer experiences: ${positiveReviews.join(' ')}` : '';
+    const businessInfo = enrichment.title || enrichment.business_name || '';
+    const address = enrichment.address || '';
+    const signatureDishes = enrichment.preferences?.food?.dish?.join(', ') || '';
+    const culture = enrichment.culture?.Kolkata?.['Park Street']?.description || '';
+    const lifestyle = enrichment.lifestyle?.['Park Street']?.description || '';
+    const thumbnail = enrichment.thumbnail_url || '';
+    const referenceText = thumbnail ? `Use the provided thumbnail as a visual reference for the video. Thumbnail URL: ${thumbnail}` : '';
+    const extra = [businessInfo, address, signatureDishes, culture, lifestyle, reviewText, referenceText].filter(Boolean).join('\n');
+    const enrichedVideoPrompt = `${videoPrompt}\n${extra}`;
+
     try {
-      console.log('[VIDEO GENERATION] Starting video generation with FAL:', videoPrompt);
+      console.log('[VIDEO GENERATION] Starting video generation with FAL:', enrichedVideoPrompt);
+
+      // Validate FAL configuration
+      if (!process.env.FAL_KEY) {
+        throw new Error('FAL_KEY not configured - video generation unavailable');
+      }
 
       // Prepare input for FAL
       const input = {
-        prompt: videoPrompt,
+        prompt: enrichedVideoPrompt,
       };
       if (image_url) input.image_url = image_url;
       if (width) input.width = width;
       if (height) input.height = height;
+
+      console.log('[VIDEO GENERATION] FAL input:', JSON.stringify(input, null, 2));
 
       // Call FAL subscribe
       const result = await fal.subscribe("fal-ai/bytedance/seedance/v1/lite/image-to-video", {
@@ -632,7 +702,6 @@ class AIService {
         },
       });
 
-      // ADD THIS LINE:
       console.log('[VIDEO GENERATION] FAL raw result:', JSON.stringify(result, null, 2));
 
       // result.data contains the video result, result.requestId is the job id
@@ -645,7 +714,7 @@ class AIService {
         url: videoUrl,
         provider: 'fal-ai',
         model: 'bytedance/seedance/v1/lite/image-to-video',
-        prompt: videoPrompt,
+        prompt: enrichedVideoPrompt,
         duration: duration,
         generatedAt: new Date(),
         requestId: result.requestId,
@@ -656,7 +725,22 @@ class AIService {
 
     } catch (error) {
       console.error('[VIDEO GENERATION] Error generating video with FAL:', error);
-      throw error;
+      
+      // Handle specific FAL errors
+      if (error.status === 422) {
+        console.error('[VIDEO GENERATION] Validation error details:', error.body);
+        throw new Error(`Video generation validation failed: ${error.body?.detail?.[0]?.msg || 'Invalid input parameters'}`);
+      }
+      
+      if (error.status === 401) {
+        throw new Error('FAL authentication failed - check your API key');
+      }
+      
+      if (error.status === 429) {
+        throw new Error('FAL rate limit exceeded - try again later');
+      }
+      
+      throw new Error(`Video generation failed: ${error.message}`);
     }
   }
 
