@@ -1,30 +1,6 @@
 const firestoreService = require('../services/firestoreService');
 const aiService = require('../services/aiService'); // Assuming aiService is needed for creation
 
-// Helper to generate a refined, creative prompt from campaign details
-function generateImagePromptFromDetails(data) {
-  let prompt = `Create a visually stunning, high-quality marketing image for a campaign.`;
-  if (data.businessIntro) prompt += ` The business is: ${data.businessIntro}.`;
-  if (data.location) prompt += ` Located in ${data.location}.`;
-  if (data.campaignGoal) prompt += ` The main goal is to ${String(data.campaignGoal).replace(/-/g, ' ')}.`;
-  if (data.brandVibe) {
-    const vibeMap = {
-      'bold-energetic': 'bold and energetic',
-      'friendly-relatable': 'friendly and relatable',
-      'informative-trustworthy': 'informative and trustworthy',
-      'sleek-premium': 'sleek and premium'
-    };
-    prompt += ` The campaign vibe should be ${vibeMap[data.brandVibe] || data.brandVibe}.`;
-  }
-  if (data.targetCustomer) prompt += ` Target audience: ${data.targetCustomer}.`;
-  if (data.superpowers && data.superpowers.length > 0) prompt += ` Unique strengths: ${data.superpowers.join(', ')}.`;
-  if (data.adType) prompt += ` Ad format: ${data.adType}.`;
-  if (data.preferredLanguages && data.preferredLanguages.length > 0) prompt += ` Use languages: ${data.preferredLanguages.join(', ')}.`;
-  if (data.additionalInfo) prompt += ` Additional info: ${data.additionalInfo}.`;
-  prompt += ` The image should be eye-catching, modern, and relevant to the business context. Avoid text in the image.`;
-  return prompt.replace(/\s+/g, ' ').trim();
-}
-
 // Create a new campaign
 exports.createCampaign = async (req, res) => {
     try {
@@ -42,6 +18,7 @@ exports.createCampaign = async (req, res) => {
         // Generate all campaign content (captions, hashtags, ad copy, image) using Mistral + Replicate
         try {
             console.log('Generating AI content for campaign:', campaignData);
+            await aiService.initEnrichmentData(campaignData);
             const aiContent = await aiService.generateCampaignContent(campaignData);
             console.log('Raw AI content result:', aiContent);
             campaignData.caption = typeof aiContent.caption === 'string' ? aiContent.caption : '';
@@ -126,16 +103,13 @@ exports.updateCampaign = async (req, res) => {
             campaignData.brandVibe !== undefined;
         if (shouldRegenerateImage) {
             try {
+                await aiService.initEnrichmentData(campaignData);
                 let imagePrompt = campaignData.imagePrompt;
                 if (!imagePrompt) {
-                    const promptDetails = generateImagePromptFromDetails({
-                        ...existingCampaign,
-                        ...campaignData
-                    });
-                    const refined = await aiService.generateContent('imagePrompt', promptDetails, { provider: 'mistral' });
-                    imagePrompt = refined.content || promptDetails;
+                    const imagePromptResult = await aiService.generateImagePrompt('', 'mistral', {});
+                    imagePrompt = imagePromptResult.content;
                 }
-                const imageResult = await aiService.generateImage(imagePrompt, { provider: 'aiml' });
+                const imageResult = await aiService.generateImage(imagePrompt, { provider: 'replicate' });
                 campaignData.imageUrl = imageResult.url;
             } catch (imgErr) {
                 console.error('Failed to regenerate campaign image:', imgErr);

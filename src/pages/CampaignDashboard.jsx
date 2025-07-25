@@ -5,7 +5,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement,
 import { LineChart, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie as RechartsPie, Cell, BarChart, Bar as RechartsBar, Legend as RechartsLegend } from 'recharts';
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
 import './CampaignDashboard.css';
-import { subscribeToCampaigns, subscribeToUserCampaigns } from '../utils/firestoreUtils';
+import { subscribeToCampaigns, subscribeToUserCampaigns} from '../utils/firestoreUtils';
 import AuthUtils from '../utils/authUtils';
 import { collection, query, where, orderBy, onSnapshot, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -265,14 +265,22 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
     setError(null);
     let unsubscribe;
     if (user && user.id) {
-      console.log('Subscribing to campaigns for user:', user.id);
+      console.log('🔄 Subscribing to campaigns for user:', user.id);
+      console.log('🔄 Subscription path: users/' + user.id + '/campaigns');
+      
+      // Force refresh by adding a timestamp to bypass cache
+      const timestamp = Date.now();
+      console.log('🔄 Cache-busting timestamp:', timestamp);
+      
       unsubscribe = subscribeToUserCampaigns(user.id, (data) => {
-        console.log('Campaigns loaded:', data.length, 'campaigns');
+        console.log('📋 Campaigns loaded from subscription:', data.length, 'campaigns');
+        console.log('📋 Campaign IDs:', data.map(c => c.id));
         data.forEach(campaign => {
-          console.log('Campaign:', {
+          console.log('📋 Campaign details:', {
             id: campaign.id,
             title: campaign.title,
-            userId: campaign.userId
+            userId: campaign.userId,
+            createdAt: campaign.createdAt
           });
         });
         setCampaigns(data);
@@ -282,7 +290,10 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
       setCampaigns([]);
       setLoading(false);
     }
-    return () => unsubscribe && unsubscribe();
+    return () => {
+      console.log('🔄 Unsubscribing from campaigns');
+      unsubscribe && unsubscribe();
+    };
   }, [user]);
 
   useEffect(() => {
@@ -476,15 +487,51 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
     alert(`Duplicate campaign: ${campaign.title}`);
   };
   const handleDeleteCampaign = async (campaign) => {
-    showToast(`Are you sure you want to delete campaign: ${campaign.title}?`, 'warning');
-    if (window.confirm(`Are you sure you want to delete campaign: ${campaign.title}?`)) {
-      try {
-        // TODO: Replace with actual delete logic (API call)
-        // await deleteCampaign(campaign.id);
-        showToast('Campaign deleted successfully!', 'success');
-      } catch (err) {
-        showToast('Failed to delete campaign. Please try again.', 'error');
+    if (!window.confirm(`Are you sure you want to delete campaign: ${campaign.title}?`)) {
+      return;
+    }
+    
+    try {
+      // Call server API to delete campaign (this handles both main collection and user subcollection)
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('User not authenticated');
       }
+      
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`/api/campaigns/${campaign.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-firebase-user-id': idToken
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete campaign');
+      }
+      
+      // Update local state immediately for better UX
+      setCampaigns(prev => {
+        const filtered = prev.filter(c => c.id !== campaign.id);
+        return filtered;
+      });
+      
+      // // Force refresh from server to ensure cache is updated
+      // try {
+      //   await forceRefreshUserCampaigns(user.id, campaign.id, (refreshedCampaigns) => {
+      //     setCampaigns(refreshedCampaigns);
+      //   });
+      // } catch (refreshError) {
+      //   // Silently handle refresh errors, local state is already updated
+      // }
+      
+      showToast('Campaign deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Error deleting campaign:', err);
+      showToast('Failed to delete campaign. Please try again.', 'error');
     }
   };
 
@@ -498,31 +545,11 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
     console.log('Pause campaign', id);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this campaign?')) return;
-    try {
-      await deleteDoc(doc(db, 'campaigns', id));
-      // Optionally, show a toast or notification
-      if (typeof showToast === 'function') showToast('Campaign deleted!', 'success');
-      // Optionally, update local state if you want instant UI feedback:
-      setCampaigns((prev) => prev.filter((c) => c.id !== id));
-    } catch (error) {
-      console.error('Error deleting campaign:', error);
-      if (typeof showToast === 'function') showToast('Failed to delete campaign.', 'error');
-    }
-  };
-
   const handleGenerateVideo = async (campaign) => {
     if (!campaign.id) {
       showToast('Campaign ID not found', 'error');
       return;
     }
-
-    console.log('Generating video for campaign:', {
-      id: campaign.id,
-      title: campaign.title,
-      userId: campaign.userId
-    });
 
     setVideoGenerating(prev => ({ ...prev, [campaign.id]: true }));
     
@@ -534,14 +561,8 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
         throw new Error('User not authenticated');
       }
       
-      console.log('Current user:', {
-        uid: currentUser.uid,
-        email: currentUser.email
-      });
-      
       const idToken = await currentUser.getIdToken();
       const url = `/api/campaigns/${campaign.id}/generate-video`;
-      console.log('Making request to:', url);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -557,17 +578,31 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
       }
 
       const result = await response.json();
-      console.log('API result:', result); // Add this for debugging
 
+      // Update local state immediately
       setCampaigns(prev => {
         const updated = prev.map(c => 
           c.id === campaign.id 
             ? { ...c, generatedVideo: result.video }
             : c
         );
-        console.log('Updated campaigns:', updated); // Add this for debugging
         return updated;
       });
+
+      // Also update the user campaign in Firestore to ensure persistence
+      try {
+        const { updateUserCampaign } = await import('../utils/firestoreUtils');
+        
+        if (user && user.id) {
+          await updateUserCampaign(user.id, campaign.id, {
+            generatedVideo: result.video,
+            updatedAt: new Date()
+          });
+        }
+      } catch (firestoreError) {
+        console.error('Failed to update user campaign in Firestore:', firestoreError);
+        // Don't show error to user since video was generated successfully
+      }
 
       showToast('Video generated successfully!', 'success');
     } catch (error) {
@@ -577,6 +612,8 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
       setVideoGenerating(prev => ({ ...prev, [campaign.id]: false }));
     }
   };
+
+
 
   // Enhanced loading state with accessibility
   if (loading) {
@@ -1373,7 +1410,7 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                                 </button>
                                 <button
                                   title="Delete"
-                                  onClick={() => handleDelete(campaign.id)}
+                                  onClick={() => handleDeleteCampaign(campaign)}
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                                 >
                                   <img src={trashIcon} alt="Delete" width={18} height={18} />
@@ -1603,6 +1640,44 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
                                     )}
                                   </button>
                                 )}
+                                <button
+                                  onClick={() => debugVideoStorage(campaign)}
+                                  style={{
+                                    background: '#6b7280',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    padding: '0.5rem 1rem',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    marginLeft: '0.5rem',
+                                  }}
+                                >
+                                  🔍 Debug
+                                </button>
+                                <button
+                                  onClick={() => debugCampaignDeletion(campaign.id)}
+                                  style={{
+                                    background: '#dc2626',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    padding: '0.5rem 1rem',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    marginLeft: '0.5rem',
+                                  }}
+                                >
+                                  🗑️ Debug Delete
+                                </button>
                               </div>
                               {campaign.generatedVideo && campaign.generatedVideo.url ? (
                                 <VideoPlayer 
