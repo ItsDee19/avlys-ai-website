@@ -5,6 +5,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+
+// Import environment validator
+const envValidator = require('./utils/envValidator');
 
 // Import Firebase config first to handle initialization
 const { firebaseInitialized } = require('./config/firebase');
@@ -12,8 +16,21 @@ const { firebaseInitialized } = require('./config/firebase');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Validate environment on startup
+console.log('🔍 Validating environment configuration...');
+envValidator.printReport();
+
+const validation = envValidator.validate();
+if (!validation.isValid) {
+  console.error('❌ Critical environment errors found. Please fix them before starting the server.');
+  process.exit(1);
+}
+
 // Middleware
 app.use(helmet());
+
+// Cookie parser middleware for secure authentication
+app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -43,11 +60,14 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const services = envValidator.checkServiceAvailability();
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     firebase: firebaseInitialized ? 'connected' : 'disconnected',
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    services: services,
+    version: '1.0.0'
   });
 });
 
@@ -135,6 +155,13 @@ app.listen(PORT, () => {
     console.log('⚠️  Firebase is not properly configured. Some features may not work.');
     console.log('📝 Please check your .env file and Firebase credentials.');
   }
+  
+  // Print service status
+  const services = envValidator.checkServiceAvailability();
+  console.log('\n📦 Available Services:');
+  Object.entries(services).forEach(([service, available]) => {
+    console.log(`  ${service}: ${available ? '✅' : '❌'}`);
+  });
 });
 
 // Serve static assets in production

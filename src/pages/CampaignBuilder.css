@@ -95,6 +95,22 @@
   margin: 0;
 }
 
+.required-fields-notice {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.required-fields-notice p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1e40af;
+  font-weight: 500;
+}
+
 /* AI Response */
 .ai-response {
   display: flex;
@@ -859,6 +875,15 @@
     font-size: 0.85rem;
     line-height: 1.4;
     text-align: left;
+  }
+  
+  .required-fields-notice {
+    padding: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .required-fields-notice p {
+    font-size: 0.8rem;
   }
 
   /* AI Response mobile optimization */

@@ -33,6 +33,7 @@ const CampaignBuilder = () => {
   const [campaignData, setCampaignData] = useState({
     businessIntro: '',
     location: '',
+    businessType: '', // Optional: Helps with categorization
     campaignGoal: '',
     brandVibe: '',
     budget: '',
@@ -45,41 +46,41 @@ const CampaignBuilder = () => {
   const [aiResponse, setAiResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const steps = [
+    const steps = [
     {
       id: 'business-intro',
-      title: 'Who are we marketing for?',
-      question: 'Quick intro - What\'s your business all about?',
-      subtitle: 'One-liner, e.g. "Herbal skincare brand in Bangalore" or "Grocery shop in Odisha"',
+      title: 'Tell us about your business',
+      question: 'What\'s your business name and where are you located?',
+      subtitle: 'Just the basics - our AI will research everything else!',
       fields: ['businessIntro', 'location']
     },
     {
       id: 'campaign-goal',
-      title: 'What\'s your goal here?',
-      question: 'What do you want this campaign to do?',
-      subtitle: 'Choose what matters most to you',
+      title: 'What\'s your goal?',
+      question: 'What do you want this campaign to achieve?',
+      subtitle: 'Choose your main objective',
       fields: ['campaignGoal', 'brandVibe']
     },
     {
       id: 'budget',
-      title: 'How much are we playing with?',
-      question: 'Do you have a budget in mind?',
-      subtitle: 'This helps us recommend the right strategy',
+      title: 'What\'s your budget?',
+      question: 'How much do you want to spend on this campaign?',
+      subtitle: 'This helps us recommend the right platforms and strategy',
       fields: ['budget']
     },
     {
       id: 'target-customer',
-      title: 'Who\'s your ideal customer?',
-      question: 'Who buys your product? Or who should?',
-      subtitle: 'Tell us everything - age, gender, habits, location, lifestyle... the more we know, the sharper the magic',
+      title: 'Who\'s your audience?',
+      question: 'Who should see your ads?',
+      subtitle: 'Help us target the right people',
       fields: ['targetCustomer', 'preferredLanguages']
     },
     {
       id: 'superpower',
-      title: 'What\'s your superpower?',
-      question: 'What makes you special?',
-      subtitle: 'Pick what sets you apart from the competition',
-      fields: ['superpowers', 'additionalInfo', 'adType']
+      title: 'What makes you special?',
+      question: 'What sets you apart from competitors?',
+      subtitle: 'Choose your unique strengths',
+      fields: ['superpowers', 'adType']
     }
   ];
 
@@ -161,55 +162,55 @@ const CampaignBuilder = () => {
         }
       };
 
-      // Helper to generate a refined, creative prompt from business details
-      const generateImagePromptFromDetails = (data) => {
-        let prompt = `Create a visually stunning, high-quality marketing image for a campaign.`;
-        if (data.businessIntro) prompt += ` The business is: ${data.businessIntro}.`;
-        if (data.location) prompt += ` Located in ${data.location}.`;
-        if (data.campaignGoal) prompt += ` The main goal is to ${data.campaignGoal.replace(/-/g, ' ')}.`;
-        if (data.brandVibe) {
-          const vibeMap = {
-            'bold-energetic': 'bold and energetic',
-            'friendly-relatable': 'friendly and relatable',
-            'informative-trustworthy': 'informative and trustworthy',
-            'sleek-premium': 'sleek and premium'
-          };
-          prompt += ` The campaign vibe should be ${vibeMap[data.brandVibe] || data.brandVibe}.`;
-        }
-        if (data.targetCustomer) prompt += ` Target audience: ${data.targetCustomer}.`;
-        if (data.superpowers && data.superpowers.length > 0) prompt += ` Unique strengths: ${data.superpowers.join(', ')}.`;
-        if (data.adType) prompt += ` Ad format: ${data.adType}.`;
-        if (data.preferredLanguages && data.preferredLanguages.length > 0) prompt += ` Use languages: ${data.preferredLanguages.join(', ')}.`;
-        if (data.additionalInfo) prompt += ` Additional info: ${data.additionalInfo}.`;
-        prompt += ` The image should be eye-catching, modern, and relevant to the business context. Avoid text in the image.`;
-        return prompt.replace(/\s+/g, ' ').trim();
-      };
+             // Helper to generate a refined, creative prompt from business details
+       const generateImagePromptFromDetails = (data) => {
+         let prompt = `Create a visually stunning, high-quality marketing image for a campaign.`;
+         if (data.businessIntro) prompt += ` The business is: ${data.businessIntro}.`;
+         if (data.location) prompt += ` Located in ${data.location}.`;
+         if (data.businessType) prompt += ` Business type: ${data.businessType}.`;
+         if (data.campaignGoal) prompt += ` The main goal is to ${data.campaignGoal.replace(/-/g, ' ')}.`;
+         if (data.brandVibe) {
+           const vibeMap = {
+             'bold-energetic': 'bold and energetic',
+             'friendly-relatable': 'friendly and relatable',
+             'informative-trustworthy': 'informative and trustworthy',
+             'sleek-premium': 'sleek and premium'
+           };
+           prompt += ` The campaign vibe should be ${vibeMap[data.brandVibe] || data.brandVibe}.`;
+         }
+         if (data.targetCustomer) prompt += ` Target audience: ${data.targetCustomer}.`;
+         if (data.superpowers && data.superpowers.length > 0) prompt += ` Unique strengths: ${data.superpowers.join(', ')}.`;
+         if (data.adType) prompt += ` Ad format: ${data.adType}.`;
+         if (data.preferredLanguages && data.preferredLanguages.length > 0) prompt += ` Use languages: ${data.preferredLanguages.join(', ')}.`;
+         prompt += ` The image should be eye-catching, modern, and relevant to the business context. Avoid text in the image.`;
+         return prompt.replace(/\s+/g, ' ').trim();
+       };
 
-      // Prepare campaign data with required fields
-      const campaignPayload = {
-        title: campaignData.businessIntro, // Use businessIntro as title
-        description: `Campaign for ${campaignData.businessIntro}`,
-        businessIntro: campaignData.businessIntro,
-        location: campaignData.location,
-        campaignGoal: campaignData.campaignGoal,
-        brandVibe: campaignData.brandVibe,
-        budget: Number(campaignData.budget) || 0,
-        targetCustomer: campaignData.targetCustomer,
-        preferredLanguages: campaignData.preferredLanguages,
-        superpowers: campaignData.superpowers,
-        additionalInfo: campaignData.additionalInfo,
-        adType: campaignData.adType,
-        platforms: getPlatformsFromAdType(campaignData.adType),
-        // Add default values for dashboard display
-        status: 'draft',
-        impressions: 0,
-        clicks: 0,
-        conversions: 0,
-        spend: 0,
-        aiGenerated: true,
-        // Add a meaningful image/content prompt
-        imagePrompt: generateImagePromptFromDetails(campaignData)
-      };
+             // Prepare campaign data with required fields
+       const campaignPayload = {
+         title: campaignData.businessIntro, // Use businessIntro as title
+         description: `Campaign for ${campaignData.businessIntro}`,
+         businessIntro: campaignData.businessIntro,
+         location: campaignData.location,
+         businessType: campaignData.businessType,
+         campaignGoal: campaignData.campaignGoal,
+         brandVibe: campaignData.brandVibe,
+         budget: Number(campaignData.budget) || 0,
+         targetCustomer: campaignData.targetCustomer,
+         preferredLanguages: campaignData.preferredLanguages,
+         superpowers: campaignData.superpowers,
+         adType: campaignData.adType,
+         platforms: getPlatformsFromAdType(campaignData.adType),
+         // Add default values for dashboard display
+         status: 'draft',
+         impressions: 0,
+         clicks: 0,
+         conversions: 0,
+         spend: 0,
+         aiGenerated: true,
+         // Add a meaningful image/content prompt
+         imagePrompt: generateImagePromptFromDetails(campaignData)
+       };
 
       console.log('Campaign payload:', campaignPayload);
 
@@ -322,49 +323,96 @@ const CampaignBuilder = () => {
 
   const isStepValid = () => {
     const step = steps[currentStep];
-    return step.fields.every(field => {
-      const value = campaignData[field];
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
-      return value && value.trim() !== '';
-    });
+    
+    // Special validation for business-intro step - only business name and location required
+    if (step.id === 'business-intro') {
+      const requiredFields = ['businessIntro', 'location'];
+      return requiredFields.every(field => {
+        const value = campaignData[field];
+        return value && value.trim() !== '';
+      });
+    }
+    
+    // For other steps, all fields are optional - user can proceed with any amount of information
+    return true;
   };
 
   const renderStepContent = () => {
     const step = steps[currentStep];
     
     switch (step.id) {
-      case 'business-intro':
-        return (
-          <motion.div 
-            className="step-content"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+             case 'business-intro':
+         return (
+           <motion.div 
+             className="step-content"
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.2 }}
+           >
+             <div className="required-fields-notice">
+               <p>🚀 <strong>Quick start:</strong> Just tell us your business name and location. Our AI will research everything else automatically!</p>
+             </div>
+            
             <div className="input-group">
-              <label className="input-label">Business Introduction</label>
+              <label className="input-label">Business Name *</label>
               <input
                 type="text"
                 placeholder="e.g., Herbal skincare brand in Bangalore"
                 value={campaignData.businessIntro}
                 onChange={(e) => handleInputChange('businessIntro', e.target.value)}
                 className="wizard-input"
+                required
               />
+              <div className="input-hint">
+                💡 Use your exact business name as it appears on Google Maps
+              </div>
             </div>
+            
             <div className="input-group">
-              <label className="input-label">Where are you based?</label>
+              <label className="input-label">Where are you based? *</label>
               <input
                 type="text"
-                placeholder="Search for your town/city/state"
+                placeholder="City, State (e.g., Bangalore, Karnataka)"
                 value={campaignData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 className="wizard-input"
+                required
               />
+              <div className="input-hint">
+                💡 Include city and state for better local market research
+              </div>
+            </div>
+            
+            <div className="input-group">
+              <label className="input-label">Business Type (Optional)</label>
+              <select
+                value={campaignData.businessType}
+                onChange={(e) => handleInputChange('businessType', e.target.value)}
+                className="wizard-input"
+              >
+                <option value="">Select business type (optional)</option>
+                <option value="restaurant">Restaurant & Food</option>
+                <option value="retail">Retail & Shopping</option>
+                <option value="healthcare">Healthcare & Wellness</option>
+                <option value="beauty">Beauty & Personal Care</option>
+                <option value="fitness">Fitness & Sports</option>
+                <option value="education">Education & Training</option>
+                <option value="technology">Technology & IT</option>
+                <option value="automotive">Automotive</option>
+                <option value="real-estate">Real Estate</option>
+                <option value="entertainment">Entertainment & Events</option>
+                <option value="services">Professional Services</option>
+                <option value="manufacturing">Manufacturing</option>
+                <option value="other">Other</option>
+              </select>
+              <div className="input-hint">
+                💡 Helps us categorize your business better
+              </div>
             </div>
           </motion.div>
         );
+      
+      
       
       case 'campaign-goal':
         return (
@@ -449,6 +497,9 @@ const CampaignBuilder = () => {
                     className="wizard-input budget-input"
                   />
                 </div>
+                <div className="input-hint">
+                  💡 Your budget helps us choose the right platforms and optimize ad spend for maximum ROI
+                </div>
               </div>
               
               <div className="budget-alternative">
@@ -477,19 +528,19 @@ const CampaignBuilder = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="input-group">
-              <label className="input-label">Describe your ideal customer</label>
-              <textarea
-                placeholder="e.g., Young professionals aged 25-35, mostly women, who care about natural skincare, live in urban areas, shop online frequently, value sustainability..."
-                value={campaignData.targetCustomer}
-                onChange={(e) => handleInputChange('targetCustomer', e.target.value)}
-                className="wizard-textarea"
-                rows={6}
-              />
-              <div className="input-hint">
-                💡 Include age, gender, habits, location, lifestyle, interests, and pain points
-              </div>
-            </div>
+                         <div className="input-group">
+               <label className="input-label">Describe your ideal customer</label>
+               <textarea
+                 placeholder="e.g., Young professionals aged 25-35, mostly women, who care about natural skincare, live in urban areas, shop online frequently, value sustainability..."
+                 value={campaignData.targetCustomer}
+                 onChange={(e) => handleInputChange('targetCustomer', e.target.value)}
+                 className="wizard-textarea"
+                 rows={4}
+               />
+               <div className="input-hint">
+                 💡 Tell us about age, gender, lifestyle, interests - the more specific, the better!
+               </div>
+             </div>
             
             <div className="languages-section">
               <label className="input-label">Preferred language(s) for the ad</label>
@@ -570,16 +621,7 @@ const CampaignBuilder = () => {
               </div>
             </div>
             
-            <div className="input-group">
-              <label className="input-label">Anything else the world should know about? </label>
-              <textarea
-                placeholder="e.g., 'India's only gluten-free modak delivery brand!'"
-                value={campaignData.additionalInfo}
-                onChange={(e) => handleInputChange('additionalInfo', e.target.value)}
-                className="wizard-textarea"
-                rows={3}
-              />
-            </div>
+            
             
             <div className="ad-type-section">
               <h3>What kind of ad would you like to see?</h3>

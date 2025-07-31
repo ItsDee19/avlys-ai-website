@@ -3,10 +3,44 @@ const JWTUtil = require('../utils/jwt');
 const { auth, firebaseInitialized } = require('../config/firebase');
 const firestoreService = require('../services/firestoreService');
 
+// CSRF token validation middleware
+const validateCSRFToken = (req, res, next) => {
+  // Skip CSRF validation for GET requests and certain endpoints
+  if (req.method === 'GET' || 
+      req.path.includes('/health') || 
+      req.path.includes('/auth/login') || 
+      req.path.includes('/auth/register')) {
+    return next();
+  }
+
+  const csrfToken = req.headers['x-csrf-token'];
+  const storedToken = req.session?.csrfToken;
+
+  if (!csrfToken || !storedToken) {
+    return res.status(403).json({ error: 'CSRF token missing' });
+  }
+
+  try {
+    if (!JWTUtil.verifyCSRFToken(csrfToken, storedToken)) {
+      return res.status(403).json({ error: 'Invalid CSRF token' });
+    }
+    next();
+  } catch (error) {
+    console.error('CSRF validation error:', error);
+    return res.status(403).json({ error: 'CSRF token validation failed' });
+  }
+};
+
 const authenticateUser = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const firebaseUserId = req.headers['x-firebase-user-id'];
+    // Priority 1: Check for secure HTTP-only cookies (most secure)
+    let token = req.cookies?.accessToken;
+    let firebaseUserId = req.headers['x-firebase-user-id'];
+
+    // Priority 2: Fallback to Authorization header (for API clients)
+    if (!token) {
+      token = req.headers.authorization?.split(' ')[1];
+    }
 
     if (!token && !firebaseUserId) {
       return res.status(401).json({ error: 'No authentication token provided' });
@@ -28,7 +62,7 @@ const authenticateUser = async (req, res, next) => {
       }
     }
 
-    // JWT fallback
+    // JWT fallback with enhanced security
     if (token) {
       try {
         const decoded = JWTUtil.verifyToken(token);
@@ -42,8 +76,8 @@ const authenticateUser = async (req, res, next) => {
         console.warn('JWT token verification failed:', jwtError.message);
         
         // Check if token is expired and try to refresh
-        if (jwtError.message === 'Token expired') {
-          const refreshToken = req.headers['x-refresh-token'];
+        if (jwtError.message === 'Token expired' || jwtError.name === 'TokenExpiredError') {
+          const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'];
           if (refreshToken) {
             try {
               const refreshDecoded = JWTUtil.verifyRefreshToken(refreshToken);
@@ -52,7 +86,10 @@ const authenticateUser = async (req, res, next) => {
                 refreshDecoded.email
               );
               
-              // Set new tokens in response headers
+              // Set new tokens in secure cookies
+              JWTUtil.setSecureCookies(res, accessToken, newRefreshToken);
+              
+              // Also set in headers for API clients
               res.setHeader('x-new-access-token', accessToken);
               res.setHeader('x-new-refresh-token', newRefreshToken);
               
@@ -65,6 +102,8 @@ const authenticateUser = async (req, res, next) => {
               return next();
             } catch (refreshError) {
               console.warn('Token refresh failed:', refreshError.message);
+              // Clear invalid cookies
+              JWTUtil.clearSecureCookies(res);
             }
           }
         }
@@ -90,8 +129,14 @@ const authenticateUser = async (req, res, next) => {
 
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const firebaseUserId = req.headers['x-firebase-user-id'];
+    // Priority 1: Check for secure HTTP-only cookies
+    let token = req.cookies?.accessToken;
+    let firebaseUserId = req.headers['x-firebase-user-id'];
+
+    // Priority 2: Fallback to Authorization header
+    if (!token) {
+      token = req.headers.authorization?.split(' ')[1];
+    }
 
     if (!token && !firebaseUserId) {
       req.user = null;
@@ -128,8 +173,8 @@ const optionalAuth = async (req, res, next) => {
         console.warn('JWT token verification failed:', jwtError.message);
         
         // Check if token is expired and try to refresh
-        if (jwtError.message === 'Token expired') {
-          const refreshToken = req.headers['x-refresh-token'];
+        if (jwtError.message === 'Token expired' || jwtError.name === 'TokenExpiredError') {
+          const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'];
           if (refreshToken) {
             try {
               const refreshDecoded = JWTUtil.verifyRefreshToken(refreshToken);
@@ -138,7 +183,10 @@ const optionalAuth = async (req, res, next) => {
                 refreshDecoded.email
               );
               
-              // Set new tokens in response headers
+              // Set new tokens in secure cookies
+              JWTUtil.setSecureCookies(res, accessToken, newRefreshToken);
+              
+              // Also set in headers for API clients
               res.setHeader('x-new-access-token', accessToken);
               res.setHeader('x-new-refresh-token', newRefreshToken);
               
@@ -151,6 +199,8 @@ const optionalAuth = async (req, res, next) => {
               return next();
             } catch (refreshError) {
               console.warn('Token refresh failed:', refreshError.message);
+              // Clear invalid cookies
+              JWTUtil.clearSecureCookies(res);
             }
           }
         }
@@ -168,4 +218,4 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticateUser, optionalAuth };
+module.exports = { authenticateUser, optionalAuth, validateCSRFToken };

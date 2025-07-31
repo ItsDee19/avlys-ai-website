@@ -109,17 +109,17 @@ router.post('/login', async (req, res) => {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
     } else {
-      return res.status(400).json({ error: 'Either email/password or Firebase authentication is required' });
-    }
-
-    if (!user) {
-      return res.status(401).json({ error: 'Authentication failed' });
+      return res.status(400).json({ error: 'Invalid authentication method' });
     }
 
     // Generate JWT tokens
     const { accessToken, refreshToken } = JWTUtil.generateTokens(user.id, user.email);
 
-    res.json({
+    // Set secure HTTP-only cookies
+    JWTUtil.setSecureCookies(res, accessToken, refreshToken);
+
+    // Also return tokens in response for backward compatibility (API clients)
+    res.status(200).json({
       message: 'Login successful',
       user: {
         id: user.id,
@@ -139,6 +139,19 @@ router.post('/login', async (req, res) => {
     } else {
       res.status(500).json({ error: 'Login failed' });
     }
+  }
+});
+
+// Logout user
+router.post('/logout', (req, res) => {
+  try {
+    // Clear secure cookies
+    JWTUtil.clearSecureCookies(res);
+    
+    res.status(200).json({ message: 'Logout successful' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
   }
 });
 
@@ -221,33 +234,30 @@ router.get('/verify', authenticateUser, (req, res) => {
 // Refresh token endpoint
 router.post('/refresh', async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
     
     if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token is required' });
+      return res.status(401).json({ error: 'Refresh token required' });
     }
 
-    // Verify refresh token
     const decoded = JWTUtil.verifyRefreshToken(refreshToken);
-    
-    // Generate new tokens
     const { accessToken, refreshToken: newRefreshToken } = JWTUtil.generateTokens(
       decoded.userId,
       decoded.email
     );
 
-    res.json({
-      message: 'Tokens refreshed successfully',
+    // Set new secure cookies
+    JWTUtil.setSecureCookies(res, accessToken, newRefreshToken);
+
+    // Also return tokens in response for backward compatibility
+    res.status(200).json({
+      message: 'Token refreshed successfully',
       accessToken,
       refreshToken: newRefreshToken
     });
   } catch (error) {
     console.error('Token refresh error:', error);
-    
-    if (error.message.includes('expired')) {
-      return res.status(401).json({ error: 'Refresh token expired. Please login again.' });
-    }
-    
+    JWTUtil.clearSecureCookies(res);
     res.status(401).json({ error: 'Invalid refresh token' });
   }
 });

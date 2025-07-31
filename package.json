@@ -8,7 +8,17 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "jest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup": "node scripts/setup.js",
+    "start": "npm run dev",
+    "server": "cd server && npm start",
+    "server:dev": "cd server && npm run dev",
+    "scraper": "cd scraper && python start.py",
+    "scraper:install": "cd scraper && pip install -r requirements.txt",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server:dev\" \"npm run scraper\"",
+    "test:all": "npm test && cd server && npm test",
+    "audit:fix": "npm audit fix && cd server && npm audit fix",
+    "clean": "rm -rf node_modules package-lock.json && cd server && rm -rf node_modules package-lock.json && npm install && cd server && npm install"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
@@ -58,6 +68,7 @@
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.2.0",
+    "concurrently": "^8.2.2",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.1",

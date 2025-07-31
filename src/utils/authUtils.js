@@ -1,40 +1,105 @@
 // Authentication utilities for handling token refresh
 
 class AuthUtils {
-  static TOKEN_KEY = 'accessToken';
-  static REFRESH_TOKEN_KEY = 'refreshToken';
-  static API_BASE_URL = 'http://localhost:5001/api';
-  static onAutoLogout = null; // callback for auto-logout
+  constructor() {
+    this.TOKEN_KEY = 'accessToken';
+    this.REFRESH_TOKEN_KEY = 'refreshToken';
+    this.CSRF_TOKEN_KEY = 'csrfToken';
+    this.API_BASE_URL = 'http://localhost:5001/api';
+  }
 
   // Store tokens in localStorage
-  static setTokens(accessToken, refreshToken) {
+  storeTokens(accessToken, refreshToken) {
     localStorage.setItem(this.TOKEN_KEY, accessToken);
     localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
   }
 
   // Get access token from localStorage
-  static getAccessToken() {
+  getAccessToken() {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
   // Get refresh token from localStorage
-  static getRefreshToken() {
+  getRefreshToken() {
     return localStorage.getItem(this.REFRESH_TOKEN_KEY);
   }
 
   // Remove tokens from localStorage
-  static clearTokens() {
+  clearTokens() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    localStorage.removeItem(this.CSRF_TOKEN_KEY);
   }
 
-  // Check if user is authenticated
-  static isAuthenticated() {
-    return !!this.getAccessToken();
+  // Generate and store CSRF token
+  generateCSRFToken() {
+    const token = this.generateRandomToken(32);
+    localStorage.setItem(this.CSRF_TOKEN_KEY, token);
+    return token;
   }
 
-  // Refresh access token using refresh token
-  static async refreshToken() {
+  // Get stored CSRF token
+  getCSRFToken() {
+    return localStorage.getItem(this.CSRF_TOKEN_KEY);
+  }
+
+  // Generate random token
+  generateRandomToken(length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  // Authenticated fetch with CSRF protection
+  async authenticatedFetch(url, options = {}) {
+    const token = this.getAccessToken();
+    const csrfToken = this.getCSRFToken();
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    const config = {
+      ...options,
+      headers,
+      credentials: 'include' // Include cookies for secure authentication
+    };
+
+    try {
+      const response = await fetch(url, config);
+      
+      // Handle token refresh if needed
+      if (response.status === 401) {
+        const refreshed = await this.refreshToken();
+        if (refreshed) {
+          // Retry the request with new token
+          const newToken = this.getAccessToken();
+          headers['Authorization'] = `Bearer ${newToken}`;
+          return fetch(url, { ...config, headers });
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Authenticated fetch error:', error);
+      throw error;
+    }
+  }
+
+  // Refresh token
+  async refreshToken() {
     try {
       const refreshToken = this.getRefreshToken();
       if (!refreshToken) {
@@ -44,171 +109,75 @@ class AuthUtils {
       const response = await fetch(`${this.API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ refreshToken }),
+        credentials: 'include'
       });
 
-      if (!response.ok) {
-        throw new Error('Token refresh failed');
+      if (response.ok) {
+        const data = await response.json();
+        this.storeTokens(data.accessToken, data.refreshToken);
+        return true;
+      } else {
+        this.clearTokens();
+        return false;
       }
-
-      const data = await response.json();
-      this.setTokens(data.accessToken, data.refreshToken);
-      
-      return data.accessToken;
     } catch (error) {
-      console.error('Token refresh error:', error);
+      console.error('Token refresh failed:', error);
       this.clearTokens();
-      if (typeof this.onAutoLogout === 'function') {
-        this.onAutoLogout();
-      }
-      throw error;
+      return false;
     }
   }
 
-  // Make authenticated API request with automatic token refresh
-  static async authenticatedFetch(url, options = {}) {
-    const makeRequest = async (token) => {
-      const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers,
+  // Check if user is authenticated
+  isAuthenticated() {
+    const token = this.getAccessToken();
+    if (!token) return false;
+    
+    try {
+      // Basic token validation (check if it's not expired)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Date.now() / 1000;
+      return payload.exp > currentTime;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
+  }
+
+  // Get user info from token
+  getUserFromToken() {
+    const token = this.getAccessToken();
+    if (!token) return null;
+    
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return {
+        id: payload.userId || payload.id,
+        email: payload.email
       };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-        headers['x-refresh-token'] = this.getRefreshToken();
-      }
-
-      return fetch(url, {
-        ...options,
-        headers,
-      });
-    };
-
-    try {
-      let accessToken = this.getAccessToken();
-      let response = await makeRequest(accessToken);
-
-      // Check if new tokens were provided in response headers
-      const newAccessToken = response.headers.get('x-new-access-token');
-      const newRefreshToken = response.headers.get('x-new-refresh-token');
-      
-      if (newAccessToken && newRefreshToken) {
-        this.setTokens(newAccessToken, newRefreshToken);
-        console.log('Tokens automatically refreshed');
-      }
-
-      // If token is expired and no automatic refresh happened, try manual refresh
-      if (response.status === 401 && !newAccessToken) {
-        console.log('Token expired, attempting refresh...');
-        accessToken = await this.refreshToken();
-        response = await makeRequest(accessToken);
-      }
-
-      return response;
     } catch (error) {
-      console.error('Authenticated fetch error:', error);
-      throw error;
-    }
-  }
-
-  // Login user and store tokens
-  static async login(email, password) {
-    try {
-      const response = await fetch(`${this.API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const data = await response.json();
-      this.setTokens(data.accessToken, data.refreshToken);
-      
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  }
-
-  // Register user and store tokens
-  static async register(username, email, password) {
-    try {
-      const response = await fetch(`${this.API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Registration failed');
-      }
-
-      const data = await response.json();
-      this.setTokens(data.accessToken, data.refreshToken);
-      
-      return data;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
-    }
-  }
-
-  // Logout user
-  static logout() {
-    this.clearTokens();
-    if (typeof this.onAutoLogout === 'function') {
-      this.onAutoLogout();
-    }
-  }
-
-  // Decode JWT token (without verification)
-  static decodeToken(token) {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch (error) {
-      console.error('Token decode error:', error);
+      console.error('Error parsing token:', error);
       return null;
     }
   }
 
-  // Check if token is expired
-  static isTokenExpired(token) {
-    if (!token) return true;
-    
-    const decoded = this.decodeToken(token);
-    if (!decoded || !decoded.exp) return true;
-    
-    const currentTime = Date.now() / 1000;
-    return decoded.exp < currentTime;
-  }
-
-  // Get user info from token
-  static getUserFromToken() {
-    const token = this.getAccessToken();
-    if (!token || this.isTokenExpired(token)) return null;
-    
-    return this.decodeToken(token);
+  // Logout user
+  async logout() {
+    try {
+      // Call logout endpoint to clear server-side cookies
+      await fetch(`${this.API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    } finally {
+      // Clear local storage regardless
+      this.clearTokens();
+    }
   }
 }
 
-export default AuthUtils;
+export default new AuthUtils();
