@@ -268,10 +268,43 @@ class FirestoreService {
   async deleteCampaign(campaignId) {
     try {
         this.checkAvailability();
+        
+        // First, get the campaign to find the userId
+        const campaign = await this.getCampaignById(campaignId);
+        if (!campaign) {
+            throw new Error('Campaign not found');
+        }
+        
+        // Delete from main campaigns collection
         const campaignRef = db.collection('campaigns').doc(campaignId);
         await campaignRef.delete();
+        
+        // Also delete from user's subcollection if userId exists
+        if (campaign.userId) {
+            try {
+                const userCampaignRef = db.collection('users').doc(campaign.userId).collection('campaigns').doc(campaignId);
+                await userCampaignRef.delete();
+                console.log(`✅ Deleted campaign ${campaignId} from both main collection and user subcollection`);
+            } catch (subcollectionError) {
+                console.warn(`⚠️ Failed to delete from user subcollection: ${subcollectionError.message}`);
+                // Don't throw error here as main deletion was successful
+            }
+        }
     } catch (error) {
         console.error('Error deleting campaign:', error);
+        throw error;
+    }
+  }
+
+  // Delete campaign from user subcollection specifically
+  async deleteUserCampaign(userId, campaignId) {
+    try {
+        this.checkAvailability();
+        const userCampaignRef = db.collection('users').doc(userId).collection('campaigns').doc(campaignId);
+        await userCampaignRef.delete();
+        console.log(`✅ Deleted campaign ${campaignId} from user ${userId} subcollection`);
+    } catch (error) {
+        console.error('Error deleting user campaign:', error);
         throw error;
     }
   }

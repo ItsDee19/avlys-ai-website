@@ -125,7 +125,7 @@ export default function DeploymentCenter({ campaigns = [], userSocials = {}, onU
     try {
       // Merge the new value into socials
       const socials = { ...userSocials, [platform.toLowerCase()]: value };
-      const res = await AuthUtils.authenticatedFetch('http://localhost:5000/api/profile', {
+      const res = await AuthUtils.authenticatedFetch('http://localhost:5001/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ socials }),

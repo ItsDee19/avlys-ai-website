@@ -8,7 +8,7 @@ const AuthContext = createContext();
 
 const JWT_TOKEN_KEY = 'accessToken';
 const JWT_REFRESH_KEY = 'refreshToken';
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 async function fetchJwtTokens(firebaseUser) {
   const idToken = await firebaseUser.getIdToken();

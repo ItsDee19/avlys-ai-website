@@ -3,7 +3,7 @@
 class AuthUtils {
   static TOKEN_KEY = 'accessToken';
   static REFRESH_TOKEN_KEY = 'refreshToken';
-  static API_BASE_URL = 'http://localhost:5000/api';
+  static API_BASE_URL = 'http://localhost:5001/api';
   static onAutoLogout = null; // callback for auto-logout
 
   // Store tokens in localStorage

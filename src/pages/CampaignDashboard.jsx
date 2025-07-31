@@ -5,7 +5,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement,
 import { LineChart, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie as RechartsPie, Cell, BarChart, Bar as RechartsBar, Legend as RechartsLegend } from 'recharts';
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
 import './CampaignDashboard.css';
-import { subscribeToCampaigns, subscribeToUserCampaigns} from '../utils/firestoreUtils';
+
 import AuthUtils from '../utils/authUtils';
 import { collection, query, where, orderBy, onSnapshot, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -259,41 +259,67 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
     ]
   };
 
-  // Fetch campaigns from Firestore
+  // Fetch campaigns from server API
   useEffect(() => {
     setLoading(true);
     setError(null);
-    let unsubscribe;
+    
     if (user && user.id) {
-      console.log('🔄 Subscribing to campaigns for user:', user.id);
-      console.log('🔄 Subscription path: users/' + user.id + '/campaigns');
+      console.log('🔄 Fetching campaigns for user:', user.id);
       
-      // Force refresh by adding a timestamp to bypass cache
-      const timestamp = Date.now();
-      console.log('🔄 Cache-busting timestamp:', timestamp);
-      
-      unsubscribe = subscribeToUserCampaigns(user.id, (data) => {
-        console.log('📋 Campaigns loaded from subscription:', data.length, 'campaigns');
-        console.log('📋 Campaign IDs:', data.map(c => c.id));
-        data.forEach(campaign => {
-          console.log('📋 Campaign details:', {
-            id: campaign.id,
-            title: campaign.title,
-            userId: campaign.userId,
-            createdAt: campaign.createdAt
+      const fetchCampaigns = async () => {
+        try {
+          const auth = getAuth();
+          const currentUser = auth.currentUser;
+          if (!currentUser) {
+            throw new Error('User not authenticated');
+          }
+          
+          const idToken = await currentUser.getIdToken();
+          const response = await fetch('/api/campaigns', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-firebase-user-id': idToken
+            }
           });
-        });
-        setCampaigns(data);
-        setLoading(false);
-      });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch campaigns');
+          }
+          
+          const data = await response.json();
+          console.log('📋 Campaigns loaded from server:', data.length, 'campaigns');
+          console.log('📋 Campaign IDs:', data.map(c => c.id));
+          data.forEach(campaign => {
+            console.log('📋 Campaign details:', {
+              id: campaign.id,
+              title: campaign.title,
+              userId: campaign.userId,
+              createdAt: campaign.createdAt
+            });
+          });
+          setCampaigns(data);
+          setLoading(false);
+        } catch (error) {
+          console.error('Error fetching campaigns:', error);
+          setError(error.message);
+          setLoading(false);
+        }
+      };
+      
+      fetchCampaigns();
+      
+      // Set up polling for real-time updates (every 30 seconds)
+      const interval = setInterval(fetchCampaigns, 30000);
+      
+      return () => {
+        clearInterval(interval);
+      };
     } else {
       setCampaigns([]);
       setLoading(false);
     }
-    return () => {
-      console.log('🔄 Unsubscribing from campaigns');
-      unsubscribe && unsubscribe();
-    };
   }, [user]);
 
   useEffect(() => {
@@ -519,14 +545,30 @@ const CampaignDashboard = ({ showSignInModal, handleShowSignIn }) => {
         return filtered;
       });
       
-      // // Force refresh from server to ensure cache is updated
-      // try {
-      //   await forceRefreshUserCampaigns(user.id, campaign.id, (refreshedCampaigns) => {
-      //     setCampaigns(refreshedCampaigns);
-      //   });
-      // } catch (refreshError) {
-      //   // Silently handle refresh errors, local state is already updated
-      // }
+      // Force refresh from server to ensure data is consistent
+      try {
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          const idToken = await currentUser.getIdToken();
+          const refreshResponse = await fetch('/api/campaigns', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-firebase-user-id': idToken
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const refreshedCampaigns = await refreshResponse.json();
+            setCampaigns(refreshedCampaigns);
+            console.log('✅ Campaigns refreshed from server after deletion');
+          }
+        }
+      } catch (refreshError) {
+        console.warn('Failed to refresh campaigns after deletion:', refreshError);
+        // Local state is already updated, so this is not critical
+      }
       
       showToast('Campaign deleted successfully!', 'success');
     } catch (err) {

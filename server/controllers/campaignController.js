@@ -139,7 +139,17 @@ exports.deleteCampaign = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: You do not have access to this campaign' });
         }
 
+        // Delete from both main collection and user subcollection
         await firestoreService.deleteCampaign(id);
+        
+        // Also delete from user subcollection to ensure frontend updates
+        try {
+            await firestoreService.deleteUserCampaign(req.user.id, id);
+        } catch (subcollectionError) {
+            console.warn('Failed to delete from user subcollection:', subcollectionError.message);
+            // Don't fail the request if subcollection deletion fails
+        }
+        
         res.status(204).send(); // No Content
     } catch (error) {
         console.error('Error deleting campaign:', error);
