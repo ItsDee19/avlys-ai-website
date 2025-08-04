@@ -79,9 +79,9 @@ async def health():
             "notes": research_tools_message
         }
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
+        logger.exception("Health check failed")  # Logs the full stack trace
         return {
             "status": "unhealthy",
-            "message": f"Health check failed: {str(e)}",
+            "message": "Health check failed due to an internal error.",
             "timestamp": asyncio.get_event_loop().time()
         }
