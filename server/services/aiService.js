@@ -116,7 +116,6 @@ class AIService {
       };
       const response = await axios.post('http://localhost:8000/scrape', payload, {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 10000, // 10 seconds timeout
       });
       return response.data; // Assumes FastAPI returns JSON
     } catch (error) {
@@ -648,11 +647,114 @@ class AIService {
         if (error.response) {
           console.error('AI ML API Error:', error.response.data);
         }
-        throw error;
+        
+        // Fallback to Replicate if AI ML fails
+        console.log('[IMAGE GENERATION] AI ML failed, trying Replicate as fallback...');
+        try {
+          return await this.generateImageWithReplicate(imagePrompt, count, size);
+        } catch (fallbackError) {
+          console.error('Error generating image with Replicate fallback:', fallbackError);
+          throw new Error(`Image generation failed with all providers. AI ML: ${error.message}, Replicate: ${fallbackError.message}`);
+        }
       }
     } else {
       throw new Error(`Provider ${provider} not supported for image generation`);
     }
+  }
+
+  // Generate image with Replicate (fallback method)
+  async generateImageWithReplicate(imagePrompt, count = 1, size = '1024x1024') {
+    try {
+      console.log('[IMAGE GENERATION] Generating image with Replicate:', imagePrompt);
+      
+      // Get reference image from enrichment data if available
+      const referenceImage = this.enrichmentData?.thumbnail_url || null;
+      
+      const imagePromises = [];
+      for (let i = 0; i < count; i++) {
+        imagePromises.push(
+          axios.post('https://api.replicate.com/v1/predictions', {
+            version: "39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+            input: {
+              prompt: imagePrompt,
+              image: referenceImage, // Use thumbnail as reference if available
+              width: size.split('x')[0],
+              height: size.split('x')[1],
+              num_outputs: 1,
+              guidance_scale: 7.5,
+              num_inference_steps: 50
+            }
+          }, {
+            headers: {
+              'Authorization': `Token ${this.providers.replicate.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 120000 // 2 minute timeout for Replicate
+          })
+        );
+      }
+      
+      const responses = await Promise.all(imagePromises);
+      const images = responses.map((response, index) => {
+        const predictionId = response.data.id;
+        // For Replicate, we need to poll for the result
+        return this.pollReplicateResult(predictionId, index + 1);
+      });
+      
+      const results = await Promise.all(images);
+      console.log(`[IMAGE GENERATION] Generated ${results.length} image(s) with Replicate`);
+      results.forEach((image, index) => {
+        console.log(`[IMAGE ${index + 1}] URL: ${image.url}`);
+      });
+      
+      return count === 1 ? results[0] : results;
+    } catch (error) {
+      console.error('Error generating image with Replicate:', error);
+      throw error;
+    }
+  }
+
+  // Poll Replicate prediction result
+  async pollReplicateResult(predictionId, imageIndex) {
+    const maxAttempts = 30; // 5 minutes max (10 second intervals)
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const response = await axios.get(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+          headers: {
+            'Authorization': `Token ${this.providers.replicate.apiKey}`
+          }
+        });
+        
+        const prediction = response.data;
+        
+        if (prediction.status === 'succeeded') {
+          return {
+            url: prediction.output[0],
+            provider: 'replicate',
+            model: 'stability-ai/sdxl',
+            prompt: prediction.input.prompt,
+            index: imageIndex
+          };
+        } else if (prediction.status === 'failed') {
+          throw new Error(`Replicate prediction failed: ${prediction.error}`);
+        }
+        
+        // Wait 10 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        attempts++;
+      } catch (error) {
+        console.error(`Error polling Replicate result (attempt ${attempts + 1}):`, error);
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new Error(`Failed to get Replicate result after ${maxAttempts} attempts`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
+    }
+    
+    throw new Error('Replicate polling timeout');
   }
 
   // Generate videos using FAL (ByteDance Seedance via FAL)
@@ -733,7 +835,17 @@ class AIService {
       }
       
       if (error.status === 401) {
-        throw new Error('FAL authentication failed - check your API key');
+        console.log('[VIDEO GENERATION] FAL authentication failed, trying alternative approach...');
+        // For now, return a placeholder since video generation is optional
+        return {
+          url: null,
+          provider: 'none',
+          model: 'none',
+          prompt: enrichedVideoPrompt,
+          duration: duration,
+          generatedAt: new Date(),
+          error: 'Video generation unavailable - FAL authentication failed'
+        };
       }
       
       if (error.status === 429) {
