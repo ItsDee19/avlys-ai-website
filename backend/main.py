@@ -7,6 +7,7 @@ from routers import authorize
 import asyncio # Import asyncio for health endpoint timestamp
 import logging # Import logging for detailed health endpoint
 import os # Import os for environment variables in health endpoint
+from database.db import client
 
 # Configure logging for main app as well
 logging.basicConfig(level=logging.INFO)
@@ -85,3 +86,9 @@ async def health():
             "message": "Health check failed due to an internal error.",
             "timestamp": asyncio.get_event_loop().time()
         }
+        
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
+    
