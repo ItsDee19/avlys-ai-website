@@ -2,20 +2,20 @@ from datetime import time, timedelta, datetime
 import os 
 from dotenv import load_dotenv
 import redis
-from celery import Celery
 import json
 from .schedule_posts import SchedulePosts
+from database.db import database
 
 class DeploymentAgent:
 
     def __init__(self):
         try:
-            self.redis_db = redis.Redis(host='localhost', port=6379, db=1)
-        except redis.ConnectionError as e:
-            raise ConnectionError(f"Redis connection failed: {e}")
+            self.db = database
+        except Exception as e:
+            raise Exception(f"Failed to connect to database")
 
         try:
-            with open(r'D:\Avlys\avlys-ai-website\fastapi\routers\deployment_agent\deployment.json', 'r') as f:
+            with open(r'D:\Avlys\avlys-ai-website\backend\routers\deployment_agent\deployment.json', 'r') as f:
                 self.deployment_dict = json.load(f)
         except FileNotFoundError:
             raise FileNotFoundError("deployment.json file not found")
@@ -31,51 +31,44 @@ class DeploymentAgent:
             "Saturday": 5,
             "Sunday": 6,
         }
-        self.scheduler = SchedulePosts()
+        self.scheduler = SchedulePosts(self.db)
 
-    def initialize_campaign(self, user_id, campaign_id, deployment_id):
+    async def initialize_campaign(self, user_id, campaign_id, deployment_id):
         
         self.user_id = user_id
         self.campaign_id = campaign_id
         self.deployment_id = deployment_id
         
-        result = {
-            "status": "deployed",
-            "timestamp": datetime.now().isoformat(),
-            "duration": "0s"  
+        creds = {
+            "user_id": user_id,
+            "campaign_id": campaign_id,
+            "deployment_id": deployment_id,
+            "status": "user initialized"
         }
-        redis_key = f"deployment:{deployment_id}"
-
+        
         try:
-            self.redis_db.hset(
-                redis_key,
-                mapping={
-                    "user_id": user_id,
-                    "campaign_id": campaign_id,
-                    "deployment_id": deployment_id,
-                    "build_status": result["status"],
-                    "build_duration": result["duration"]
-                }
-            )
+            await self.db["user_credentials"].create_index(
+            [("user_id", 1), ("campaign_id", 1), ("deployment_id", 1)],
+            unique=True
+        )
         except Exception as e:
-            raise RuntimeError(f"Failed to save deployment data in Redis: {e}")
+            raise Exception(f"Failed to save user credentials: {e}")
 
-        return result
 
     def schedule_campaigns(self, socials:list, content: dict, info: dict):
         for social in socials:
             try:
                 if social == "instagram":
                     creds = info.get('instagram', {})
-                    self.deploy_to_instagram(content.get('instagram', {}), creds.get('user_id'), creds.get('password'))
+                    self.deploy_to_instagram(content.get('instagram', {}), creds.get('user_id'))
 
                 elif social == "facebook":
                     creds = info.get('facebook', {})
-                    self.deploy_to_facebook(content.get('facebook', {}), creds.get('user_id'), creds.get('password'))
+                    self.deploy_to_facebook(content.get('facebook', {}), creds.get('user_id'))
 
                 elif social == "twitter":
                     creds = info.get('twitter', {})
-                    self.deploy_to_twitter(content.get('twitter', {}), creds.get('user_id'), creds.get('password'))
+                    self.deploy_to_twitter(content.get('twitter', {}), creds.get('user_id'))
             
             except Exception as e:
                 print(f"Error scheduling for {social}: {e}")
@@ -106,7 +99,7 @@ class DeploymentAgent:
 
         return closest_dt
 
-    def deploy_to_instagram(self, content, user_id, password):
+    def deploy_to_instagram(self, content, user_id):
         try:
             time_config = self.deployment_dict.get('instagram')
             content_types = content.get('content_type', [])
@@ -124,7 +117,7 @@ class DeploymentAgent:
         except Exception as e:
             print(f"Instagram deployment error: {e}")
 
-    def deploy_to_facebook(self, content, user_id, password):
+    def deploy_to_facebook(self, content, user_id):
         try:
             time_config = self.deployment_dict.get('facebook')
             now = datetime.fromisoformat(content.get('date', {}).get('now'))
@@ -136,7 +129,7 @@ class DeploymentAgent:
         except Exception as e:
             print(f"Facebook deployment error: {e}")
 
-    def deploy_to_twitter(self, content, user_id, password):
+    def deploy_to_twitter(self, content, user_id):
         try:
             time_config = self.deployment_dict.get('twitter')
             now = datetime.fromisoformat(content.get('date', {}).get('now'))
@@ -144,6 +137,8 @@ class DeploymentAgent:
 
             closest_dt = self._find_closest_datetime(time_config, now, today_weekday)
             if closest_dt:
-                self.scheduler.schedule_twitter_post(timestamp=int(closest_dt.timestamp()), content=content, user_id=user_id)
+                self.scheduler.schedule_twitter_post(timestamp=int(closest_dt.timestamp()), content=content, user_id=user_id, )
         except Exception as e:
             print(f"Twitter deployment error: {e}")
+            
+    

@@ -32,3 +32,10 @@ async def schedule_campaigns(scheduler: Scheduler):
     return {
         "message": message
     }
+    
+@router.get("/test_schedule_twitter_post_now")
+async def test_schedule_twitter_post_now():
+    message = await deployment_agent.scheduler.test_schedule_twitter_post_now()
+    return {
+        "message": message
+    }
